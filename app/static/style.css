@@ -414,3 +414,167 @@ footer {
 .radio-choice small {
   color: var(--muted);
 }
+/* =========================================================
+   HOME / SOUS-APPLICATIONS
+   ========================================================= */
+
+.home-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.app-tile {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas:
+    "icon title"
+    "icon sub";
+  gap: 3px 14px;
+  align-items: center;
+  padding: 18px;
+  border-radius: 22px;
+  background: linear-gradient(135deg, #29283a, #1a1a24);
+  border: 1px solid var(--border);
+  box-shadow: 0 14px 32px rgba(0,0,0,.18);
+  color: var(--text);
+  text-decoration: none;
+}
+
+.app-tile:active {
+  transform: scale(.985);
+}
+
+.app-icon {
+  grid-area: icon;
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  background: rgba(255,255,255,.08);
+  font-size: 1.8rem;
+}
+
+.app-title {
+  grid-area: title;
+  font-size: 1.25rem;
+  font-weight: 850;
+}
+
+.app-sub {
+  grid-area: sub;
+  color: var(--muted);
+  font-size: .92rem;
+}
+
+.app-tile.disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+.home-link {
+  text-decoration: none;
+}
+
+/* =========================================================
+   UX PLAYER STATE / WAVEFORM
+   ========================================================= */
+
+.js-stop-form.hidden {
+  display: none;
+}
+
+.home-link {
+  text-decoration: none;
+}
+
+.app-tile.is-playing {
+  outline: 2px solid rgba(255,255,255,.18);
+  background:
+    radial-gradient(circle at top right, rgba(97,211,148,.18), transparent 36%),
+    linear-gradient(135deg, #29283a, #1a1a24);
+}
+
+.mini-waveform {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: end;
+  gap: 4px;
+  height: 24px;
+  margin-top: 10px;
+  opacity: .95;
+}
+
+.mini-waveform.hidden {
+  display: none;
+}
+
+.mini-waveform i,
+.live-waveform i {
+  display: block;
+  width: 5px;
+  border-radius: 999px;
+  background: rgba(246,243,247,.86);
+  animation: wavePulse 1s ease-in-out infinite;
+}
+
+.mini-waveform i:nth-child(1),
+.live-waveform i:nth-child(1) {
+  height: 9px;
+  animation-delay: 0s;
+}
+
+.mini-waveform i:nth-child(2),
+.live-waveform i:nth-child(2) {
+  height: 18px;
+  animation-delay: .12s;
+}
+
+.mini-waveform i:nth-child(3),
+.live-waveform i:nth-child(3) {
+  height: 12px;
+  animation-delay: .24s;
+}
+
+.mini-waveform i:nth-child(4),
+.live-waveform i:nth-child(4) {
+  height: 22px;
+  animation-delay: .36s;
+}
+
+.mini-waveform i:nth-child(5),
+.live-waveform i:nth-child(5) {
+  height: 14px;
+  animation-delay: .48s;
+}
+
+.live-waveform {
+  display: flex;
+  align-items: end;
+  justify-content: center;
+  gap: 6px;
+  height: 42px;
+  margin-top: 12px;
+}
+
+.live-waveform.hidden {
+  display: none;
+}
+
+.live-waveform i {
+  width: 7px;
+}
+
+@keyframes wavePulse {
+  0%, 100% {
+    transform: scaleY(.45);
+    opacity: .55;
+  }
+
+  50% {
+    transform: scaleY(1.15);
+    opacity: 1;
+  }
+}

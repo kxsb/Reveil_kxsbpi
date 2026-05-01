@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Réveil Pi</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+  <main class="app">
+
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Réveil local</p>
+        <h1>⏰ Réveil Pi</h1>
+        <p id="heroNextAlarm" class="dashboard-sub">{{ next_alarm }}</p>
+      </div>
+      <a class="pill home-link" href="/">Accueil</a>
+    </header>
+
+    <section class="dashboard">
+      <p class="dashboard-label" id="dashboardLabel">Prochain réveil</p>
+
+      <div id="dashboardTime" class="dashboard-time" data-default="{{ current }}">
+        {{ current }}
+      </div>
+
+      <p id="dashboardSub" class="dashboard-sub" data-default="{{ next_alarm }}">
+        {{ next_alarm }}
+      </p>
+
+      <div id="liveWaveform" class="live-waveform hidden" aria-hidden="true">
+        <i></i><i></i><i></i><i></i><i></i>
+      </div>
+
+      <div id="fadeGraph" class="fade-graph hidden">
+        <svg viewBox="0 0 100 60">
+          <path id="fadeCurvePath"></path>
+          <circle id="fadeDot" r="3"></circle>
+        </svg>
+        <p id="fadeGraphLabel"></p>
+      </div>
+    </section>
+
+    <section class="card compact-card">
+      <div class="field-row">
+        <div>
+          <label>Heure</label>
+          <input id="alarmTime" type="time" value="{{ alarm_time }}">
+        </div>
+
+        <div>
+          <label>Source</label>
+          <select id="alarmMode" data-current="{{ alarm_mode }}">
+            <option value="random" {{ "selected" if alarm_mode == "random" else "" }}>Aléatoire</option>
+            <option value="playlist" {{ "selected" if alarm_mode == "playlist" else "" }}>Playlist réveil</option>
+            <optgroup id="alarmRadioOptions" label="Radios"></optgroup>
+          </select>
+        </div>
+      </div>
+
+      <p id="saveStatus" class="small status-line">✔ Réglage automatique activé</p>
+    </section>
+
+    <section class="actions">
+      <p id="actionStatus" class="small action-status">Prêt.</p>
+
+      
+
+      <div class="action-grid">
+<div class="radio-dropdown">
+          <button id="radioToggle" class="action radio-main" type="button">
+            📻 Radio
+          </button>
+
+          <div id="radioMenu" class="radio-menu hidden"></div>
+        </div>
+
+      </div>
+
+      <form action="/stop" method="post" class="js-stop-form hidden">
+        <button class="action danger" type="submit">🛑 Stop</button>
+      </form>
+    </section>
+
+    <section class="card">
+      <button id="settingsToggle" class="settings-button" type="button">
+        <span>⚙️ Paramètres du réveil</span>
+        <span class="chevron">▾</span>
+      </button>
+
+      <div id="settingsPanel" class="settings-panel hidden">
+        <h2>🌅 Réveil progressif</h2>
+
+        <label class="switch-row">
+          <span>Fade in</span>
+          <input id="fadeEnabled" type="checkbox" {% if settings.ENABLE_FADE == "1" %}checked{% endif %}>
+        </label>
+
+        <div id="fadeOptions">
+          <label>Durée de montée</label>
+          <div class="button-grid" data-setting="fadeDuration">
+            <button data-value="60" type="button" class="{% if settings.FADE_DURATION == '60' %}active{% endif %}">1 min</button>
+            <button data-value="120" type="button" class="{% if settings.FADE_DURATION == '120' %}active{% endif %}">2 min</button>
+            <button data-value="300" type="button" class="{% if settings.FADE_DURATION == '300' %}active{% endif %}">5 min</button>
+          </div>
+
+          <label>Volume de départ</label>
+          <div class="button-grid" data-setting="initialVolume">
+            <button data-value="10" type="button" class="{% if settings.INITIAL_VOLUME == '10' %}active{% endif %}">10%</button>
+            <button data-value="20" type="button" class="{% if settings.INITIAL_VOLUME == '20' %}active{% endif %}">20%</button>
+            <button data-value="30" type="button" class="{% if settings.INITIAL_VOLUME == '30' %}active{% endif %}">30%</button>
+          </div>
+
+          <label>Courbe de montée</label>
+          <div class="curve-picker" data-setting="fadeCurve">
+            <button class="curve-card {% if settings.FADE_CURVE == 'linear' %}active{% endif %}" data-value="linear" type="button">
+              <svg viewBox="0 0 100 60"><path d="M10 50 L90 10"/></svg>
+              <span>Linéaire</span>
+            </button>
+
+            <button class="curve-card {% if settings.FADE_CURVE == 'ease_in' %}active{% endif %}" data-value="ease_in" type="button">
+              <svg viewBox="0 0 100 60"><path d="M10 50 C45 50 70 40 90 10"/></svg>
+              <span>Départ doux</span>
+            </button>
+
+            <button class="curve-card {% if settings.FADE_CURVE == 'ease_out' %}active{% endif %}" data-value="ease_out" type="button">
+              <svg viewBox="0 0 100 60"><path d="M10 50 C25 20 55 10 90 10"/></svg>
+              <span>Arrivée douce</span>
+            </button>
+
+            <button class="curve-card {% if settings.FADE_CURVE == 'ease_in_out' %}active{% endif %}" data-value="ease_in_out" type="button">
+              <svg viewBox="0 0 100 60"><path d="M10 50 C30 50 35 10 90 10"/></svg>
+              <span>Progressive</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="settings-action">
+          <form action="/test" method="post">
+            <button id="testSoundFromSettings" class="action test" type="submit">🎧 Tester le son</button>
+          </form>
+
+          <button id="updatePlaylistButton" class="action secondary-action" type="button">
+            🔄 Mettre à jour la playlist
+          </button>
+          <p id="updatePlaylistStatus" class="small">Télécharge la playlist et recalcule le loudness.</p>
+        </div>
+
+        <p id="fadeStatus" class="small">Paramètres fade auto-sauvegardés</p>
+      </div>
+    </section>
+
+    <footer>
+      tu peux toujours rêver
+    </footer>
+  </main>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

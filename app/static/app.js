@@ -311,6 +311,7 @@ async function loadRadioStations() {
 
     const stations = data.stations || {};
     buildRadioMenu(stations);
+    buildAlarmSourceOptions(stations);
 
   } catch (e) {
     console.error("radio_stations error", e);
@@ -437,3 +438,97 @@ updateStatus();
 
 setInterval(refreshAlarmStatus, 60000);
 setInterval(updateStatus, 3000);
+// ===============================
+// UX multi-app : stop, waveform, source réveil
+// ===============================
+
+function setStopVisible(isVisible) {
+  document.querySelectorAll(".js-stop-form").forEach((form) => {
+    form.classList.toggle("hidden", !isVisible);
+  });
+}
+
+function setWaveformVisible(isVisible) {
+  const liveWaveform = document.getElementById("liveWaveform");
+
+  if (liveWaveform) {
+    liveWaveform.classList.toggle("hidden", !isVisible);
+  }
+}
+
+function clearHomePlayingTiles() {
+  document.querySelectorAll("[data-home-app]").forEach((tile) => {
+    tile.classList.remove("is-playing");
+    const wave = tile.querySelector(".mini-waveform");
+    if (wave) wave.classList.add("hidden");
+  });
+}
+
+function markHomePlayingTile(data) {
+  clearHomePlayingTiles();
+
+  if (!data || !["playing", "fading"].includes(data.status)) {
+    return;
+  }
+
+  let target = null;
+
+  if (data.context === "alarm" || data.status === "fading") {
+    target = document.querySelector('[data-home-app="alarm"]');
+  } else if (data.mode === "radio") {
+    target = document.querySelector('[data-home-app="radio"]');
+  } else {
+    target = document.querySelector('[data-home-app="player"]');
+  }
+
+  if (!target) return;
+
+  target.classList.add("is-playing");
+  const wave = target.querySelector(".mini-waveform");
+  if (wave) wave.classList.remove("hidden");
+}
+
+function updatePlaybackUx(data) {
+  const isPlaying = data && ["playing", "fading"].includes(data.status);
+
+  setStopVisible(isPlaying);
+  setWaveformVisible(isPlaying);
+  markHomePlayingTile(data);
+}
+
+function buildAlarmSourceOptions(stations) {
+  if (!alarmMode) return;
+
+  const radioGroup = document.getElementById("alarmRadioOptions");
+  if (!radioGroup) return;
+
+  const current = alarmMode.dataset.current || alarmMode.value;
+
+  radioGroup.innerHTML = "";
+
+  Object.entries(stations).forEach(([id, station]) => {
+    const option = document.createElement("option");
+    option.value = `radio:${id}`;
+    option.textContent = `Radio — ${station.label || id}`;
+
+    if (current === option.value) {
+      option.selected = true;
+    }
+
+    radioGroup.appendChild(option);
+  });
+}
+
+// Surveille le statut pour l'accueil et les boutons Stop
+async function refreshPlaybackUx() {
+  try {
+    const res = await fetch("/status");
+    const data = await res.json();
+    updatePlaybackUx(data);
+  } catch (e) {
+    console.error("playback ux error", e);
+  }
+}
+
+refreshPlaybackUx();
+setInterval(refreshPlaybackUx, 3000);

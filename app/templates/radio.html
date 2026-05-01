@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Radio Pi</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+  <main class="app">
+
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Radio locale</p>
+        <h1>📻 Radio Pi</h1>
+        <p id="heroNextAlarm" class="dashboard-sub">Lecteur radio</p>
+      </div>
+      <a class="pill home-link" href="/">Accueil</a>
+    </header>
+
+    <section class="dashboard">
+      <p class="dashboard-label" id="dashboardLabel">Radio</p>
+
+      <div id="dashboardTime" class="dashboard-time" data-default="Aucune radio">
+        Aucune radio
+      </div>
+
+      <p id="dashboardSub" class="dashboard-sub" data-default="Choisis une station">
+        Choisis une station
+      </p>
+
+      <div id="liveWaveform" class="live-waveform hidden" aria-hidden="true">
+        <i></i><i></i><i></i><i></i><i></i>
+      </div>
+
+      <div id="fadeGraph" class="fade-graph hidden">
+        <svg viewBox="0 0 100 60">
+          <path id="fadeCurvePath"></path>
+          <circle id="fadeDot" r="3"></circle>
+        </svg>
+        <p id="fadeGraphLabel"></p>
+      </div>
+    </section>
+
+    <section class="actions">
+      <p id="actionStatus" class="small action-status">Prêt.</p>
+
+      <div class="radio-dropdown">
+        <button id="radioToggle" class="action radio-main" type="button">
+          📻 Choisir une radio
+        </button>
+
+        <div id="radioMenu" class="radio-menu hidden"></div>
+      </div>
+
+      <form action="/stop" method="post" class="js-stop-form hidden">
+        <button class="action danger" type="submit">⏹ Stop</button>
+      </form>
+    </section>
+
+    <footer>
+      <a href="/">← Retour accueil</a>
+    </footer>
+
+  </main>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

@@ -3,8 +3,9 @@ from datetime import datetime, timedelta
 
 from services.paths import REVEIL_FILE, WEB_LOG_FILE
 
-ALLOWED_MODES = ["playlist", "radio", "random", "fip"]
+ALLOWED_SIMPLE_MODES = ["playlist", "random", "fip"]
 TIME_RE = re.compile(r"^([01][0-9]|2[0-3]):[0-5][0-9]$")
+STATION_RE = re.compile(r"^[a-zA-Z0-9_-]+$")
 
 
 def _log(msg):
@@ -24,18 +25,57 @@ def read_alarm():
         return "non réglé"
 
 
+def _normalize_alarm_source(mode):
+    """
+    Convertit la valeur venant de l'interface en format fichier.
+
+    UI:
+      random
+      playlist
+      radio:fip
+      radio:pulsar
+
+    Fichier:
+      HH:MM random
+      HH:MM playlist
+      HH:MM radio fip
+    """
+    mode = (mode or "").strip()
+
+    if mode in ALLOWED_SIMPLE_MODES:
+        if mode == "fip":
+            return "radio", "fip"
+        return mode, ""
+
+    if mode.startswith("radio:"):
+        station_id = mode.split(":", 1)[1].strip()
+
+        if STATION_RE.match(station_id):
+            return "radio", station_id
+
+        _log(f"Station radio invalide refusée : {station_id}")
+        return "random", ""
+
+    _log(f"Mode invalide remplacé par random : {mode}")
+    return "random", ""
+
+
 def write_alarm(time_value, mode):
     if not TIME_RE.match(time_value):
         _log(f"Heure invalide refusée : {time_value}")
         return False
 
-    if mode not in ALLOWED_MODES:
-        _log(f"Mode invalide remplacé par random : {mode}")
-        mode = "random"
+    normalized_mode, station_id = _normalize_alarm_source(mode)
 
     REVEIL_FILE.parent.mkdir(parents=True, exist_ok=True)
-    REVEIL_FILE.write_text(f"{time_value} {mode}\n", encoding="utf-8")
-    _log(f"Réveil réglé : {time_value} {mode}")
+
+    if normalized_mode == "radio":
+        REVEIL_FILE.write_text(f"{time_value} radio {station_id}\n", encoding="utf-8")
+        _log(f"Réveil réglé : {time_value} radio {station_id}")
+    else:
+        REVEIL_FILE.write_text(f"{time_value} {normalized_mode}\n", encoding="utf-8")
+        _log(f"Réveil réglé : {time_value} {normalized_mode}")
+
     return True
 
 
@@ -43,9 +83,18 @@ def parse_alarm():
     raw = read_alarm()
     parts = raw.split()
 
+    if len(parts) >= 3 and TIME_RE.match(parts[0]) and parts[1] == "radio":
+        station_id = parts[2] if STATION_RE.match(parts[2]) else "fip"
+        return parts[0], f"radio:{station_id}"
+
     if len(parts) >= 2 and TIME_RE.match(parts[0]):
-        mode = parts[1] if parts[1] in ALLOWED_MODES else "random"
-        return parts[0], mode
+        mode = parts[1]
+
+        if mode == "fip":
+            return parts[0], "radio:fip"
+
+        if mode in ALLOWED_SIMPLE_MODES:
+            return parts[0], mode
 
     if TIME_RE.match(raw):
         return raw, "random"

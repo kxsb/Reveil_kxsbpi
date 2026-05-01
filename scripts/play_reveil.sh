@@ -132,6 +132,7 @@ write_state_fading() {
   cat > "$STATE_FILE" <<EOF
 {
   "status": "fading",
+  "context": "$PLAYER_CONTEXT",
   "mode": "$MODE",
   "station_id": "$STATION_ID",
   "source_label": "$label",
@@ -154,6 +155,7 @@ write_state_playing() {
   cat > "$STATE_FILE" <<EOF
 {
   "status": "playing",
+  "context": "$PLAYER_CONTEXT",
   "mode": "$MODE",
   "station_id": "$STATION_ID",
   "source_label": "$label",

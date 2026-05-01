@@ -12,150 +12,60 @@
 
     <header class="hero">
       <div>
-        <p class="eyebrow">Réveil local</p>
-        <h1>⏰ Réveil Pi</h1>
-        <p id="heroNextAlarm" class="dashboard-sub">{{ next_alarm }}</p>
+        <p class="eyebrow">Raspberry Pi local</p>
+        <h1>Maison sonore</h1>
+        <p class="dashboard-sub">Choisis une sous-application</p>
       </div>
       <div class="pill">LAN</div>
     </header>
 
-    <section class="dashboard">
-      <p class="dashboard-label" id="dashboardLabel">Prochain réveil</p>
+    <section class="home-grid">
 
-      <div id="dashboardTime" class="dashboard-time" data-default="{{ current }}">
-        {{ current }}
-      </div>
+      <a id="homeTileAlarm" class="app-tile" href="/alarm" data-home-app="alarm">
+        <span class="app-icon">⏰</span>
+        <span class="app-title">Réveil</span>
+        <span class="app-sub">Heure, source, fade-in</span>
+              <span class="mini-waveform hidden" aria-hidden="true">
+          <i></i><i></i><i></i><i></i><i></i>
+        </span>
+      </a>
 
-      <p id="dashboardSub" class="dashboard-sub" data-default="{{ next_alarm }}">
-        {{ next_alarm }}
-      </p>
+      <a id="homeTileRadio" class="app-tile" href="/radio" data-home-app="radio">
+        <span class="app-icon">📻</span>
+        <span class="app-title">Radio</span>
+        <span class="app-sub">Stations, direct, métadonnées</span>
+              <span class="mini-waveform hidden" aria-hidden="true">
+          <i></i><i></i><i></i><i></i><i></i>
+        </span>
+      </a>
 
-      <div id="fadeGraph" class="fade-graph hidden">
-        <svg viewBox="0 0 100 60">
-          <path id="fadeCurvePath"></path>
-          <circle id="fadeDot" r="3"></circle>
-        </svg>
-        <p id="fadeGraphLabel"></p>
-      </div>
-    </section>
+      <a class="app-tile disabled" href="#">
+        <span class="app-icon">💡</span>
+        <span class="app-title">Lumière</span>
+        <span class="app-sub">À venir</span>
+              <span class="mini-waveform hidden" aria-hidden="true">
+          <i></i><i></i><i></i><i></i><i></i>
+        </span>
+      </a>
 
-    <section class="card compact-card">
-      <div class="field-row">
-        <div>
-          <label>Heure</label>
-          <input id="alarmTime" type="time" value="{{ alarm_time }}">
-        </div>
+      <a id="homeTilePlayer" class="app-tile disabled" href="#" data-home-app="player">
+        <span class="app-icon">🎧</span>
+        <span class="app-title">Lecteur</span>
+        <span class="app-sub">YouTube audio HQ à venir</span>
+      </a>
 
-        <div>
-          <label>Source</label>
-          <select id="alarmMode">
-            <option value="random" {{ "selected" if alarm_mode == "random" else "" }}>Aléatoire</option>
-            <option value="playlist" {{ "selected" if alarm_mode == "playlist" else "" }}>Playlist</option>
-            <option value="fip" {{ "selected" if alarm_mode == "fip" else "" }}>FIP</option>
-          </select>
-        </div>
-      </div>
+      <a class="app-tile disabled" href="#">
+        <span class="app-icon">⚙️</span>
+        <span class="app-title">Config Pi</span>
+        <span class="app-sub">Sortie audio, volume, système</span>
+      </a>
 
-      <p id="saveStatus" class="small status-line">✔ Réglage automatique activé</p>
-    </section>
-
-    <section class="actions">
-      <p id="actionStatus" class="small action-status">Prêt.</p>
-
-      <form action="/test" method="post">
-        <button class="action test" type="submit">🎧 Tester</button>
-      </form>
-
-      <div class="action-grid">
-        
-        <form action="/play_playlist" method="post">
-          <button class="action playlist" type="submit">▶️ Playlist</button>
-        </form>
-
-        <div class="radio-dropdown">
-          <button id="radioToggle" class="action radio-main" type="button">
-            📻 Radio
-          </button>
-
-          <div id="radioMenu" class="radio-menu hidden"></div>
-        </div>
-
-      </div>
-
-      <form action="/stop" method="post">
-        <button class="action danger" type="submit">🛑 Stop</button>
-      </form>
-    </section>
-
-    <section class="card">
-      <button id="settingsToggle" class="settings-button" type="button">
-        <span>⚙️ Paramètres du réveil</span>
-        <span class="chevron">▾</span>
-      </button>
-
-      <div id="settingsPanel" class="settings-panel hidden">
-        <h2>🌅 Réveil progressif</h2>
-
-        <label class="switch-row">
-          <span>Fade in</span>
-          <input id="fadeEnabled" type="checkbox" {% if settings.ENABLE_FADE == "1" %}checked{% endif %}>
-        </label>
-
-        <div id="fadeOptions">
-          <label>Durée de montée</label>
-          <div class="button-grid" data-setting="fadeDuration">
-            <button data-value="60" type="button" class="{% if settings.FADE_DURATION == '60' %}active{% endif %}">1 min</button>
-            <button data-value="120" type="button" class="{% if settings.FADE_DURATION == '120' %}active{% endif %}">2 min</button>
-            <button data-value="300" type="button" class="{% if settings.FADE_DURATION == '300' %}active{% endif %}">5 min</button>
-          </div>
-
-          <label>Volume de départ</label>
-          <div class="button-grid" data-setting="initialVolume">
-            <button data-value="10" type="button" class="{% if settings.INITIAL_VOLUME == '10' %}active{% endif %}">10%</button>
-            <button data-value="20" type="button" class="{% if settings.INITIAL_VOLUME == '20' %}active{% endif %}">20%</button>
-            <button data-value="30" type="button" class="{% if settings.INITIAL_VOLUME == '30' %}active{% endif %}">30%</button>
-          </div>
-
-          <label>Courbe de montée</label>
-          <div class="curve-picker" data-setting="fadeCurve">
-            <button class="curve-card {% if settings.FADE_CURVE == 'linear' %}active{% endif %}" data-value="linear" type="button">
-              <svg viewBox="0 0 100 60"><path d="M10 50 L90 10"/></svg>
-              <span>Linéaire</span>
-            </button>
-
-            <button class="curve-card {% if settings.FADE_CURVE == 'ease_in' %}active{% endif %}" data-value="ease_in" type="button">
-              <svg viewBox="0 0 100 60"><path d="M10 50 C45 50 70 40 90 10"/></svg>
-              <span>Départ doux</span>
-            </button>
-
-            <button class="curve-card {% if settings.FADE_CURVE == 'ease_out' %}active{% endif %}" data-value="ease_out" type="button">
-              <svg viewBox="0 0 100 60"><path d="M10 50 C25 20 55 10 90 10"/></svg>
-              <span>Arrivée douce</span>
-            </button>
-
-            <button class="curve-card {% if settings.FADE_CURVE == 'ease_in_out' %}active{% endif %}" data-value="ease_in_out" type="button">
-              <svg viewBox="0 0 100 60"><path d="M10 50 C30 50 35 10 90 10"/></svg>
-              <span>Progressive</span>
-            </button>
-          </div>
-        </div>
-
-        <div class="settings-action">
-          <button id="updatePlaylistButton" class="action secondary-action" type="button">
-            🔄 Mettre à jour la playlist
-          </button>
-          <p id="updatePlaylistStatus" class="small">Télécharge la playlist et recalcule le loudness.</p>
-        </div>
-
-        <p id="fadeStatus" class="small">Paramètres fade auto-sauvegardés</p>
-      </div>
     </section>
 
     <footer>
       tu peux toujours rêver
     </footer>
-  </main>
 
-  <script src="{{ url_for('static', filename='app.js') }}"></script>
+  </main>
 </body>
 </html>
