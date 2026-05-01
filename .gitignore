@@ -1,0 +1,18 @@
+# Logs
+*.log
+logs/
+
+# Runtime state
+state/
+*.lock
+
+# Data lourde
+music/
+tmp_reveil/
+
+# Python
+__pycache__/
+*.pyc
+
+# OS
+.DS_Store
