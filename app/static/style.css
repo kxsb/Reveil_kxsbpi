@@ -1583,3 +1583,518 @@ footer {
   border-color: rgba(255,255,255,.22);
   box-shadow: 0 0 0 3px rgba(138,95,130,.16);
 }
+
+/* =========================================================
+   UI ALARM — cohérence source/prochain réveil
+   ========================================================= */
+
+.source-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.10);
+  border: 1px solid rgba(255,255,255,.08);
+  color: var(--text);
+  font-size: .78rem;
+  font-weight: 700;
+  margin-right: 8px;
+}
+
+.alarm-until {
+  color: var(--muted);
+  font-size: .9rem;
+}
+
+.dashboard-sub {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* =========================================================
+   UI ALARM POLISH — réveil plus calme, moins triste
+   ========================================================= */
+
+.page-alarm {
+  background:
+    radial-gradient(circle at 50% -12%, rgba(156, 112, 148, .16), transparent 34%),
+    radial-gradient(circle at 105% 18%, rgba(93, 112, 155, .12), transparent 28%),
+    var(--bg);
+}
+
+.page-alarm .app {
+  padding-top: 22px;
+}
+
+.page-alarm .dashboard {
+  border-radius: 26px;
+  padding: 26px 24px 24px;
+  background:
+    linear-gradient(145deg, rgba(46, 43, 67, .92), rgba(28, 27, 39, .94)),
+    var(--card);
+  border-color: rgba(255,255,255,.085);
+  box-shadow:
+    0 22px 60px rgba(0,0,0,.34),
+    inset 0 1px 0 rgba(255,255,255,.045);
+}
+
+.page-alarm .dashboard::after {
+  content: "";
+  position: absolute;
+  inset: auto 22px 0 22px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.12), transparent);
+  opacity: .45;
+}
+
+.page-alarm .dashboard-label {
+  margin-bottom: 12px;
+  color: rgba(235,232,244,.72);
+  font-size: .82rem;
+  letter-spacing: .02em;
+}
+
+.page-alarm #dashboardTime {
+  font-size: clamp(2.25rem, 8vw, 3.3rem);
+  font-weight: 850;
+  letter-spacing: -0.065em;
+  color: rgba(246, 242, 248, .96);
+  text-shadow: 0 2px 18px rgba(156, 112, 148, .22);
+}
+
+.page-alarm .alarm-summary-line {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+}
+
+.page-alarm .alarm-source-badge,
+.page-alarm .source-chip {
+  min-height: 31px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background:
+    linear-gradient(135deg, rgba(156,112,148,.35), rgba(255,255,255,.08));
+  border: 1px solid rgba(255,255,255,.13);
+  color: rgba(255,255,255,.94);
+  font-size: .78rem;
+  font-weight: 800;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
+}
+
+.page-alarm #dashboardSub {
+  color: rgba(222, 217, 232, .64);
+  font-size: .9rem;
+}
+
+.page-alarm .alarm-inline-editor {
+  margin-top: 22px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255,255,255,.075);
+}
+
+.page-alarm .field-row {
+  gap: 12px;
+}
+
+.page-alarm .field-row label {
+  color: rgba(235,232,244,.72);
+  font-size: .8rem;
+  margin-bottom: 7px;
+}
+
+.page-alarm input,
+.page-alarm select {
+  border-radius: 17px;
+  border: 1px solid rgba(255,255,255,.09);
+  box-shadow:
+    0 8px 22px rgba(0,0,0,.10),
+    inset 0 1px 0 rgba(255,255,255,.04);
+}
+
+.page-alarm #saveStatus {
+  margin-top: 12px;
+  opacity: .6;
+  font-size: .78rem;
+}
+
+.page-alarm .settings-panel,
+.page-alarm .settings-card,
+.page-alarm .accordion,
+.page-alarm .settings-section {
+  border-radius: 24px;
+}
+
+.page-alarm .settings-toggle,
+.page-alarm .settings-header {
+  min-height: 58px;
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.085), rgba(255,255,255,.045));
+  border: 1px solid rgba(255,255,255,.065);
+}
+
+.page-alarm .footer-signature,
+.page-alarm footer {
+  margin-top: 22px;
+  opacity: .5;
+}
+
+/* =========================================================
+   UI ALARM CENTERING — colonne plus posée
+   ========================================================= */
+
+.page-alarm {
+  min-height: 100vh;
+}
+
+.page-alarm .app {
+  width: min(100% - 32px, 560px);
+  margin-inline: auto;
+  padding-inline: 0;
+}
+
+.page-alarm .hero {
+  width: 100%;
+  justify-content: flex-end;
+  margin-inline: auto;
+}
+
+.page-alarm .dashboard,
+.page-alarm .settings-panel,
+.page-alarm .settings-card,
+.page-alarm .accordion,
+.page-alarm section {
+  width: 100%;
+}
+
+.page-alarm .dashboard {
+  margin-inline: auto;
+}
+
+.page-alarm .settings-panel,
+.page-alarm .accordion {
+  margin-inline: auto;
+}
+
+.page-alarm .footer-signature,
+.page-alarm footer {
+  width: 100%;
+  text-align: left;
+}
+
+@media (min-width: 760px) {
+  .page-alarm .app {
+    width: min(100% - 48px, 640px);
+  }
+}
+
+@media (max-width: 520px) {
+  .page-alarm .app {
+    width: min(100% - 22px, 560px);
+  }
+
+  .page-alarm .dashboard {
+    padding: 24px 22px 22px;
+  }
+}
+
+/* =========================================================
+   UI ALARM — heure centrée
+   ========================================================= */
+
+.page-alarm #dashboardTime {
+  display: block;
+  width: 100%;
+  text-align: center;
+  margin-top: 8px;
+  margin-bottom: 12px;
+}
+
+.page-alarm .alarm-summary-line {
+  justify-content: center;
+  text-align: center;
+}
+
+.page-alarm .dashboard-label {
+  text-align: center;
+}
+
+.page-alarm .alarm-inline-editor {
+  text-align: left;
+}
+
+/* =========================================================
+   UI GLOBAL — cartes principales centrées
+   ========================================================= */
+
+/* Toutes les cartes principales parlent le même langage :
+   label discret, information principale centrée, statut centré. */
+.dashboard {
+  text-align: center;
+}
+
+.dashboard-label,
+.dashboard-time,
+.dashboard-sub {
+  text-align: center;
+}
+
+.dashboard-time {
+  display: block;
+  width: 100%;
+  margin-inline: auto;
+}
+
+.dashboard-sub,
+.alarm-summary-line {
+  justify-content: center;
+  text-align: center;
+}
+
+/* La waveform reste elle aussi centrée dans la carte. */
+.live-waveform,
+.fade-graph {
+  margin-inline: auto;
+}
+
+/* Mais les zones d'interaction/listes restent alignées à gauche :
+   plus lisible pour naviguer dans les fichiers, radios, playlists, métriques. */
+.alarm-inline-editor,
+.radio-menu,
+.radio-menu-in-card,
+.player-url-form,
+.music-library,
+.music-library-list,
+.system-overview,
+.playlist-manager,
+.playlist-list,
+.playlist-form,
+.metric-grid {
+  text-align: left;
+}
+
+/* Les cartes internes ne doivent pas hériter d'un centrage décoratif. */
+.metric-card,
+.playlist-card,
+.music-file-choice,
+.music-folder-choice,
+.radio-choice {
+  text-align: left;
+}
+
+/* Boutons principaux dans les cartes : largeur stable, centrés par leur conteneur. */
+.dashboard > .action,
+.dashboard .system-overview-button,
+.dashboard .playlist-manager-button {
+  margin-inline: auto;
+}
+
+/* =========================================================
+   UI MODULE POLISH GLOBAL — style commun alarm/radio/player/config
+   ========================================================= */
+
+.page-module {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 50% -12%, rgba(156, 112, 148, .16), transparent 34%),
+    radial-gradient(circle at 105% 18%, rgba(93, 112, 155, .12), transparent 28%),
+    radial-gradient(circle at -12% 82%, rgba(120, 86, 138, .08), transparent 30%),
+    var(--bg);
+}
+
+.page-module .app {
+  width: min(100% - 32px, 560px);
+  margin-inline: auto;
+  padding-inline: 0;
+  padding-top: 22px;
+}
+
+.page-module .hero {
+  width: 100%;
+  justify-content: flex-end;
+  align-items: center;
+  margin-inline: auto;
+  margin-bottom: 14px;
+}
+
+.page-module .dashboard {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  margin-inline: auto;
+  border-radius: 26px;
+  padding: 26px 24px 24px;
+  text-align: center;
+  background:
+    linear-gradient(145deg, rgba(46, 43, 67, .92), rgba(28, 27, 39, .94)),
+    var(--card);
+  border: 1px solid rgba(255,255,255,.085);
+  box-shadow:
+    0 22px 60px rgba(0,0,0,.34),
+    inset 0 1px 0 rgba(255,255,255,.045);
+}
+
+.page-module .dashboard::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at top left, rgba(255,255,255,.06), transparent 34%),
+    linear-gradient(135deg, rgba(255,255,255,.025), transparent 48%);
+  opacity: .9;
+}
+
+.page-module .dashboard::after {
+  content: "";
+  position: absolute;
+  inset: auto 22px 0 22px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.12), transparent);
+  opacity: .45;
+}
+
+.page-module .dashboard > * {
+  position: relative;
+  z-index: 1;
+}
+
+.page-module .dashboard-label {
+  margin-bottom: 12px;
+  color: rgba(235,232,244,.72);
+  font-size: .82rem;
+  letter-spacing: .02em;
+  text-align: center;
+}
+
+.page-module .dashboard-time,
+.page-module .config-title {
+  display: block;
+  width: 100%;
+  margin-inline: auto;
+  margin-top: 8px;
+  margin-bottom: 12px;
+  text-align: center;
+  font-size: clamp(2.15rem, 8vw, 3.25rem);
+  font-weight: 850;
+  letter-spacing: -0.065em;
+  line-height: 1.05;
+  color: rgba(246, 242, 248, .96);
+  text-shadow: 0 2px 18px rgba(156, 112, 148, .22);
+}
+
+.page-module .dashboard-sub {
+  color: rgba(222, 217, 232, .64);
+  font-size: .9rem;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.page-module .alarm-summary-line {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  text-align: center;
+}
+
+.page-module .alarm-source-badge,
+.page-module .source-chip {
+  min-height: 31px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background:
+    linear-gradient(135deg, rgba(156,112,148,.35), rgba(255,255,255,.08));
+  border: 1px solid rgba(255,255,255,.13);
+  color: rgba(255,255,255,.94);
+  font-size: .78rem;
+  font-weight: 800;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
+}
+
+.page-module .live-waveform,
+.page-module .fade-graph {
+  margin-inline: auto;
+}
+
+.page-module .settings-panel,
+.page-module .settings-card,
+.page-module .accordion,
+.page-module .settings-section {
+  width: 100%;
+  margin-inline: auto;
+  border-radius: 24px;
+}
+
+.page-module .settings-toggle,
+.page-module .settings-header {
+  min-height: 58px;
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, rgba(255,255,255,.085), rgba(255,255,255,.045));
+  border: 1px solid rgba(255,255,255,.065);
+}
+
+/* Les zones d'interaction restent pratiques et lisibles. */
+.page-module .alarm-inline-editor,
+.page-module .radio-menu,
+.page-module .radio-menu-in-card,
+.page-module .player-url-form,
+.page-module .music-library,
+.page-module .music-library-list,
+.page-module .system-overview,
+.page-module .playlist-manager,
+.page-module .playlist-list,
+.page-module .playlist-form,
+.page-module .metric-grid {
+  text-align: left;
+}
+
+.page-module .metric-card,
+.page-module .playlist-card,
+.page-module .music-file-choice,
+.page-module .music-folder-choice,
+.page-module .radio-choice {
+  text-align: left;
+}
+
+.page-module input,
+.page-module select {
+  border-radius: 17px;
+  border: 1px solid rgba(255,255,255,.09);
+  box-shadow:
+    0 8px 22px rgba(0,0,0,.10),
+    inset 0 1px 0 rgba(255,255,255,.04);
+}
+
+.page-module .footer-signature,
+.page-module footer {
+  width: 100%;
+  margin-top: 22px;
+  text-align: left;
+  opacity: .5;
+}
+
+@media (min-width: 760px) {
+  .page-module .app {
+    width: min(100% - 48px, 640px);
+  }
+}
+
+@media (max-width: 520px) {
+  .page-module .app {
+    width: min(100% - 22px, 560px);
+  }
+
+  .page-module .dashboard {
+    padding: 24px 22px 22px;
+  }
+}

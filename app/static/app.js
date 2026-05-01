@@ -2,6 +2,13 @@
 // Réveil : heure + source
 // ===============================
 
+function isAlarmPage() {
+  return (
+    document.body.classList.contains("page-alarm") ||
+    Boolean(document.getElementById("alarmSourceBadge"))
+  );
+}
+
 const alarmTime = document.getElementById("alarmTime");
 const alarmMode = document.getElementById("alarmMode");
 const saveStatus = document.getElementById("saveStatus");
@@ -28,7 +35,7 @@ function autosaveAlarm() {
       const json = await res.json();
 
       if (json.ok) {
-        saveStatus.textContent = "✅ Réveil réglé : " + json.value;
+        saveStatus.textContent = "✅ Réveil réglé";
 
         if (json.next_alarm) {
           if (heroNextAlarm) heroNextAlarm.textContent = json.next_alarm;
@@ -36,9 +43,14 @@ function autosaveAlarm() {
             dashboardSub.textContent = json.next_alarm;
             dashboardSub.dataset.default = json.next_alarm;
           }
-          if (dashboardTime) {
-            dashboardTime.textContent = json.value;
-            dashboardTime.dataset.default = json.value;
+          // Ne jamais injecter json.value brut dans la grosse heure :
+          // il peut contenir "22:17 radio:fip".
+          if (typeof renderAlarmFromCurrentInputs === "function") {
+            renderAlarmFromCurrentInputs();
+          }
+
+          if (typeof refreshAlarmStatus === "function") {
+            setTimeout(refreshAlarmStatus, 250);
           }
         }
       } else {
@@ -172,6 +184,60 @@ document.querySelectorAll("form[action]:not([data-player-url-form])").forEach((f
   });
 });
 
+
+// Synchronise le bouton "Tester le son" avec la source actuellement choisie.
+const testSoundMode = document.getElementById("testSoundMode");
+
+function syncTestSoundMode() {
+  if (!testSoundMode || !alarmMode) return;
+  testSoundMode.value = alarmMode.value || alarmMode.dataset.current || "random";
+}
+
+if (alarmMode) {
+  alarmMode.addEventListener("change", () => {
+    if (testSoundMode) {
+      testSoundMode.value = alarmMode.value || "random";
+    }
+  });
+}
+
+if (testSoundMode && alarmMode) {
+  syncTestSoundMode();
+
+  alarmMode.addEventListener("change", syncTestSoundMode);
+
+  const testSoundForm = testSoundMode.closest("form");
+
+  if (testSoundForm) {
+    testSoundForm.addEventListener("submit", syncTestSoundMode, true);
+  }
+}
+
+
+
+function renderAlarmFromCurrentInputs() {
+  if (!isAlarmPage()) return;
+  if (!alarmTime || !alarmMode) return;
+
+  renderCleanAlarmDashboard(
+    {
+      alarm_time: alarmTime.value || "—",
+      alarm_mode: alarmMode.value || alarmMode.dataset.current || "random",
+      next_alarm: dashboardSub ? dashboardSub.textContent : "",
+    },
+    window.__radioStations || {},
+    window.__playlists || []
+  );
+}
+
+if (alarmMode) {
+  alarmMode.addEventListener("change", renderAlarmFromCurrentInputs);
+}
+
+if (alarmTime) {
+  alarmTime.addEventListener("change", renderAlarmFromCurrentInputs);
+}
+
 const heroNextAlarm = document.getElementById("heroNextAlarm");
 const dashboardLabel = document.getElementById("dashboardLabel");
 const dashboardTime = document.getElementById("dashboardTime");
@@ -201,33 +267,18 @@ function buildCurvePath(curve) {
 
 async function refreshAlarmStatus() {
   try {
-    const res = await fetch("/alarm_status");
+    const res = await fetch("/alarm_status", { cache: "no-store" });
     const data = await res.json();
 
-    if (!data.ok) return;
-
-    if (heroNextAlarm) {
-      heroNextAlarm.textContent = data.next_alarm;
-    }
-
-    if (dashboardTime) {
-      dashboardTime.dataset.default = data.current;
-    }
-
-    if (dashboardSub) {
-      dashboardSub.dataset.default = data.next_alarm;
-    }
-
-    const alarmEditorIsOpen =
-      alarmInlineEditor && !alarmInlineEditor.classList.contains("hidden");
-
-    if (!alarmEditorIsOpen && alarmTime && data.alarm_time) {
-      alarmTime.value = data.alarm_time;
-    }
-
-    if (!alarmEditorIsOpen && alarmMode && data.alarm_mode) {
-      alarmMode.value = data.alarm_mode;
-      alarmMode.dataset.current = data.alarm_mode;
+    // Important :
+    // Les pages Radio / Lecteur / Config utilisent aussi dashboardTime/dashboardSub.
+    // On ne rend donc la carte "Prochain réveil" que sur la page Réveil.
+    if (isAlarmPage()) {
+      renderCleanAlarmDashboard(
+        data,
+        window.__radioStations || {},
+        window.__playlists || []
+      );
     }
   } catch (e) {
     console.error("alarm status error", e);
@@ -309,9 +360,23 @@ async function loadRadioStations() {
     const stations = radioData.stations || {};
     const playlists = playlistsData.ok ? (playlistsData.playlists || []) : [];
 
+    window.__radioStations = stations;
+    window.__playlists = playlists;
+
     buildRadioMenu(stations);
     buildAlarmSourceOptions(stations, playlists);
     updateAlarmSourceBadge(stations, playlists);
+    await refreshAlarmStatus();
+
+    try {
+      const alarmRes = await fetch("/alarm_status", { cache: "no-store" });
+      const alarmData = await alarmRes.json();
+      if (isAlarmPage()) {
+        renderCleanAlarmDashboard(alarmData, stations, playlists);
+      }
+    } catch (e) {
+      console.error("alarm dashboard render error", e);
+    }
 
   } catch (e) {
     console.error("source loading error", e);
@@ -633,6 +698,134 @@ if (alarmDashboard && alarmInlineEditor) {
     if (event.target.closest("#alarmInlineEditor")) return;
     toggleAlarmEditor();
   });
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+function cleanAlarmTimeFromStatus(data) {
+  if (!data) return "—";
+
+  const candidates = [
+    data.alarm_time,
+    data.time,
+    data.next_alarm_label,
+    data.alarm_label,
+    data.label,
+  ];
+
+  for (const item of candidates) {
+    if (!item) continue;
+    const match = String(item).match(/([0-9]{1,2}:[0-9]{2})/);
+    if (match) return match[1];
+  }
+
+  return "—";
+}
+
+function cleanAlarmModeFromStatus(data) {
+  if (!data) return "random";
+
+  if (data.alarm_mode) return data.alarm_mode;
+  if (data.mode) return data.mode;
+
+  const raw = String(
+    data.alarm_time ||
+    data.next_alarm_label ||
+    data.alarm_label ||
+    data.label ||
+    ""
+  ).trim();
+
+  const parts = raw.split(/\s+/);
+
+  if (parts.length >= 2) {
+    const mode = parts[1];
+
+    if (mode.includes(":")) return mode;
+    if (mode === "radio" && parts[2]) return `radio:${parts[2]}`;
+    if ((mode === "random" || mode === "playlist") && parts[2]) return `${mode}:${parts[2]}`;
+    if (mode === "random" || mode === "playlist") return mode;
+  }
+
+  return "random";
+}
+
+function cleanAlarmUntilFromStatus(data) {
+  if (!data) return "";
+
+  const candidates = [
+    data.time_until,
+    data.next_alarm_in,
+    data.until,
+    data.remaining,
+    data.next_alarm,
+  ];
+
+  for (const item of candidates) {
+    if (!item) continue;
+
+    const text = String(item).trim();
+
+    // On évite de réafficher "22:17 radio:xxx" comme temps restant.
+    if (/^[0-9]{1,2}:[0-9]{2}/.test(text)) continue;
+
+    return text;
+  }
+
+  return "";
+}
+
+function renderCleanAlarmDashboard(data, stations = {}, playlists = []) {
+  const sourceBadge = document.getElementById("alarmSourceBadge");
+
+  if (!dashboardTime || !dashboardSub) return;
+
+  const alarmTimeValue = cleanAlarmTimeFromStatus(data);
+  const alarmModeValue = cleanAlarmModeFromStatus(data);
+  const untilValue = cleanAlarmUntilFromStatus(data);
+
+  // Minimalisme :
+  // - grosse ligne = heure seule ;
+  // - badge = source ;
+  // - sous-texte = temps restant.
+  dashboardTime.textContent = alarmTimeValue;
+
+  if (sourceBadge) {
+    sourceBadge.textContent = formatAlarmModeLabel(alarmModeValue, stations, playlists);
+  }
+
+  dashboardSub.textContent = untilValue || "";
+
+  if (alarmTime) {
+    alarmTime.value = alarmTimeValue === "—" ? "" : alarmTimeValue;
+  }
+
+  if (alarmMode) {
+    alarmMode.value = alarmModeValue;
+    alarmMode.dataset.current = alarmModeValue;
+  }
+
+  const testSoundMode = document.getElementById("testSoundMode");
+  if (testSoundMode) {
+    testSoundMode.value = alarmModeValue;
+  }
+
+  const saveStatus = document.getElementById("saveStatus");
+  if (saveStatus && saveStatus.textContent.includes(":")) {
+    saveStatus.textContent = "Réglage automatique activé";
+  }
 }
 
 function formatAlarmModeLabel(mode, stations = {}, playlists = []) {

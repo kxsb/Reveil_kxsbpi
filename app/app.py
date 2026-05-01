@@ -110,10 +110,55 @@ def set_alarm_ajax():
 
 @app.route("/test", methods=["POST"])
 def test_sound():
-    # Test sonore = lecture manuelle via le moteur principal,
-    # afin de bénéficier du state, du stop et de la waveform.
-    run_process(["/bin/bash", PLAY_SCRIPT, "random", "fip", "test"])
-    return jsonify({"ok": True, "message": "🎧 Test sonore lancé"})
+    """
+    Teste la source sélectionnée dans le module Réveil.
+
+    Valeurs attendues côté UI :
+    - random
+    - playlist
+    - random:<playlist_id>
+    - playlist:<playlist_id>
+    - radio:<station_id>
+    """
+    raw_mode = request.form.get("mode", "").strip() or "random"
+
+    play_mode = "random"
+    source_id = "reveil"
+
+    if raw_mode in ["random", "playlist"]:
+        play_mode = raw_mode
+        source_id = "reveil"
+
+    elif raw_mode == "fip":
+        # Compat legacy.
+        play_mode = "radio"
+        source_id = "fip"
+
+    elif ":" in raw_mode:
+        kind, value = raw_mode.split(":", 1)
+        kind = kind.strip()
+        value = value.strip()
+
+        if kind in ["random", "playlist", "radio"] and value:
+            play_mode = kind
+            source_id = value
+        else:
+            return jsonify({
+                "ok": False,
+                "message": "Source de test invalide",
+            })
+
+    try:
+        stop_mpv()
+    except Exception as e:
+        log(f"Erreur stop avant test son : {e}")
+
+    run_process(["/bin/bash", PLAY_SCRIPT, play_mode, source_id, "test"])
+
+    return jsonify({
+        "ok": True,
+        "message": "🎧 Test sonore lancé",
+    })
 
 
 @app.route("/play_playlist", methods=["POST"])

@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 
-<body>
+<body class="page-alarm page-module">
   <main class="app">
 
     <header class="hero">
@@ -23,11 +23,11 @@
       <p class="dashboard-label">Prochain réveil</p>
 
       <div id="dashboardTime" class="dashboard-time" data-default="--:--">
-        {{ alarm_time if alarm_time else "--:--" }}
+        {{ (alarm_time or "--:--").split()[0] }}
       </div>
 
       <div class="alarm-summary-line">
-        <span id="alarmSourceBadge" class="alarm-source-badge">{{ alarm_mode }}</span>
+        <span id="alarmSourceBadge" class="alarm-source-badge">Source</span>
         <span id="dashboardSub" class="dashboard-sub" data-default="{{ next_alarm }}">
           {{ next_alarm }}
         </span>
@@ -138,6 +138,7 @@
 
         <div class="settings-action">
           <form action="/test" method="post">
+            <input id="testSoundMode" type="hidden" name="mode" value="{{ alarm_mode }}">
             <button id="testSoundFromSettings" class="action test" type="submit">🎧 Tester le son</button>
           </form>
 <p id="updatePlaylistStatus" class="small"></p>
