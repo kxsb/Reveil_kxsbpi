@@ -41,17 +41,28 @@ from services.player_service import (
 
 @app.route("/")
 def index():
+    return render_template("index.html")
+
+
+@app.route("/alarm")
+def alarm_page():
     alarm_time, alarm_mode = parse_alarm()
     settings = read_settings()
 
     return render_template(
-        "index.html",
+        "alarm.html",
         current=read_alarm(),
         alarm_time=alarm_time,
         alarm_mode=alarm_mode,
         settings=settings,
         next_alarm=next_alarm_label(),
     )
+
+
+@app.route("/radio")
+def radio_page():
+    return render_template("radio.html")
+
 
 @app.route("/set_ajax", methods=["POST"])
 def set_alarm_ajax():
@@ -95,14 +106,10 @@ def play_radio(station_id):
     if not station:
         return jsonify({"ok": False, "message": "Station inconnue"})
 
-    run_process(["/bin/bash", PLAY_SCRIPT, "radio", safe_station_id])
+    run_process(["/bin/bash", PLAY_SCRIPT, "radio", safe_station_id, "manual"])
 
-    settings = read_settings()
     label = station.get("label", safe_station_id)
     message = f"📻 Radio lancée : {label}"
-
-    if settings.get("ENABLE_FADE") == "1":
-        message += " avec fade-in"
 
     return jsonify({"ok": True, "message": message})
 

@@ -27,6 +27,7 @@ SOCKET="/tmp/mpv_socket"
 
 MODE="${1:-playlist}"
 STATION_ID="${2:-fip}"
+PLAYER_CONTEXT="${3:-alarm}"
 RADIO_STATIONS_FILE="$BASE/config/radio_stations.json"
 
 if [ "$MODE" = "fip" ]; then
@@ -70,6 +71,13 @@ FADE_STEPS="${FADE_STEPS:-80}"
 log() {
   echo "$(date '+%F %T') $*" >> "$LOG_FILE"
 }
+
+# Le fade-in appartient au réveil, pas au player radio manuel.
+# Si la radio est lancée depuis l'interface Radio, elle démarre directement.
+if [ "$PLAYER_CONTEXT" = "manual" ] && [ "$MODE" = "radio" ]; then
+  ENABLE_FADE="0"
+  log "Radio manuelle : fade-in désactivé"
+fi
 
 get_radio_value() {
   local station_id="$1"
