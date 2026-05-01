@@ -23,6 +23,8 @@ from services.paths import (
 
 ensure_runtime_dirs()
 
+from services.settings_service import read_settings, write_settings
+
 ALLOWED_MODES = ["playlist", "radio", "random", "fip"]
 
 TIME_RE = re.compile(r"^([01][0-9]|2[0-3]):[0-5][0-9]$")
@@ -56,35 +58,6 @@ def write_alarm(time_value, mode):
     log(f"Réveil réglé : {time_value} {mode}")
     return True
 
-def read_settings():
-    defaults = {
-        "ENABLE_FADE": "1",
-        "INITIAL_VOLUME": "10",
-        "MAX_VOLUME": "80",
-        "FADE_DURATION": "120",
-        "FADE_CURVE": "linear",
-    }
-
-    if not SETTINGS_FILE.exists():
-        return defaults
-
-    settings = defaults.copy()
-
-    for line in SETTINGS_FILE.read_text(encoding="utf-8").splitlines():
-        line = line.strip()
-
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-
-        key, value = line.split("=", 1)
-        key = key.strip()
-        value = value.strip().strip('"').strip("'")
-
-        if key in settings:
-            settings[key] = value
-
-    return settings
-
 def read_radio_stations():
     try:
         if not RADIO_STATIONS_FILE.exists():
@@ -100,19 +73,6 @@ def read_radio_stations():
     except Exception as e:
         log(f"Erreur lecture radio_stations : {e}")
         return {}
-
-def write_settings(settings):
-    content = "\n".join([
-        f'ENABLE_FADE={settings["ENABLE_FADE"]}',
-        f'INITIAL_VOLUME={settings["INITIAL_VOLUME"]}',
-        f'MAX_VOLUME={settings["MAX_VOLUME"]}',
-        f'FADE_DURATION={settings["FADE_DURATION"]}',
-        f'FADE_CURVE={settings["FADE_CURVE"]}',
-        "",
-    ])
-
-    SETTINGS_FILE.write_text(content, encoding="utf-8")
-    log(f"Paramètres réveil mis à jour : {settings}")
 
 def parse_alarm():
     raw = read_alarm()
@@ -310,6 +270,7 @@ def settings_ajax():
     settings["MAX_VOLUME"] = "80"
 
     write_settings(settings)
+    log(f"Paramètres réveil mis à jour : {settings}")
 
     return jsonify({
         "ok": True,
