@@ -1281,3 +1281,305 @@ footer {
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* =========================================================
+   UI CONFIG PI — gestion playlists
+   ========================================================= */
+
+.playlist-manager-button {
+  margin-top: 10px;
+  width: 100%;
+}
+
+.playlist-manager {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255,255,255,.07);
+}
+
+.playlist-manager.hidden {
+  display: none;
+}
+
+.playlist-list {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.playlist-card {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+  border: 1px solid rgba(255,255,255,.065);
+  border-radius: 16px;
+  background: rgba(255,255,255,.045);
+  padding: 11px 12px;
+}
+
+.playlist-card strong {
+  display: block;
+  color: var(--text);
+  font-size: .92rem;
+  line-height: 1.2;
+}
+
+.playlist-card small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  opacity: .64;
+  font-size: .73rem;
+  line-height: 1.25;
+  word-break: break-all;
+}
+
+.playlist-sync-button {
+  min-height: 38px;
+  padding: 0 13px;
+  border-radius: 13px;
+  cursor: pointer;
+}
+
+.playlist-form {
+  display: grid;
+  gap: 8px;
+}
+
+.playlist-form input {
+  min-height: 46px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 14px;
+  background: rgba(255,255,255,.055);
+  color: var(--text);
+  padding: 0 12px;
+  font: inherit;
+  outline: none;
+}
+
+.playlist-form input::placeholder {
+  color: var(--muted);
+  opacity: .55;
+}
+
+.playlist-form input:focus {
+  border-color: rgba(255,255,255,.22);
+  box-shadow: 0 0 0 3px rgba(138,95,130,.16);
+}
+
+/* =========================================================
+   UI CONFIG PI — fichiers des playlists
+   ========================================================= */
+
+.playlist-card {
+  cursor: pointer;
+}
+
+.playlist-card-main {
+  min-width: 0;
+}
+
+.playlist-files {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 7px;
+  padding-top: 10px;
+  margin-top: 4px;
+  border-top: 1px solid rgba(255,255,255,.07);
+}
+
+.playlist-files.hidden {
+  display: none;
+}
+
+.playlist-files-meta {
+  color: var(--muted);
+  opacity: .62;
+  font-size: .72rem;
+  margin-bottom: 2px;
+  word-break: break-all;
+}
+
+.playlist-file-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 9px;
+  border-radius: 12px;
+  background: rgba(255,255,255,.035);
+  border: 1px solid rgba(255,255,255,.045);
+}
+
+.playlist-file-row span {
+  min-width: 0;
+  color: var(--text);
+  font-size: .82rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.playlist-file-row small,
+.playlist-empty {
+  color: var(--muted);
+  opacity: .62;
+  font-size: .72rem;
+}
+
+/* =========================================================
+   UI PLAYER — navigateur dossier musique
+   ========================================================= */
+
+.music-browser-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 2px;
+  color: var(--muted);
+  opacity: .78;
+  font-size: .78rem;
+}
+
+.music-browser-header span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.music-browser-back {
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 999px;
+  background: rgba(255,255,255,.055);
+  color: var(--text);
+  padding: 5px 10px;
+  font: inherit;
+  font-size: .74rem;
+  cursor: pointer;
+}
+
+.music-folder-choice {
+  width: 100%;
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 14px;
+  background: rgba(255,255,255,.04);
+  color: var(--text);
+  padding: 11px 12px;
+  text-align: left;
+  display: grid;
+  gap: 3px;
+  cursor: pointer;
+}
+
+.music-folder-choice span {
+  font-size: .92rem;
+  font-weight: 650;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.music-folder-choice small {
+  color: var(--muted);
+  opacity: .58;
+  font-size: .74rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.music-folder-choice:hover {
+  border-color: rgba(255,255,255,.15);
+  background: rgba(255,255,255,.075);
+}
+
+/* =========================================================
+   UI ALARM — réveils types
+   ========================================================= */
+
+.alarm-presets-section {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255,255,255,.07);
+}
+
+.alarm-presets-toggle {
+  width: 100%;
+  min-height: 46px;
+  border-radius: 15px;
+  cursor: pointer;
+}
+
+.alarm-presets-panel {
+  margin-top: 12px;
+  display: grid;
+  gap: 12px;
+}
+
+.alarm-presets-panel.hidden {
+  display: none;
+}
+
+.alarm-presets-list {
+  display: grid;
+  gap: 8px;
+}
+
+.alarm-preset-choice {
+  width: 100%;
+  border: 1px solid rgba(255,255,255,.065);
+  border-radius: 15px;
+  background: rgba(255,255,255,.045);
+  color: var(--text);
+  padding: 11px 12px;
+  text-align: left;
+  display: grid;
+  gap: 3px;
+  cursor: pointer;
+}
+
+.alarm-preset-choice span {
+  font-size: .92rem;
+  font-weight: 700;
+}
+
+.alarm-preset-choice small {
+  color: var(--muted);
+  opacity: .68;
+  font-size: .74rem;
+  line-height: 1.35;
+}
+
+.alarm-preset-choice:hover {
+  border-color: rgba(255,255,255,.15);
+  background: rgba(255,255,255,.07);
+}
+
+.alarm-preset-form {
+  display: grid;
+  gap: 8px;
+}
+
+.alarm-preset-form input {
+  min-height: 46px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 14px;
+  background: rgba(255,255,255,.055);
+  color: var(--text);
+  padding: 0 12px;
+  font: inherit;
+  outline: none;
+}
+
+.alarm-preset-form input::placeholder {
+  color: var(--muted);
+  opacity: .55;
+}
+
+.alarm-preset-form input:focus {
+  border-color: rgba(255,255,255,.22);
+  box-shadow: 0 0 0 3px rgba(138,95,130,.16);
+}

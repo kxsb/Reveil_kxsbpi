@@ -43,8 +43,10 @@
           <div>
             <label>Source</label>
             <select id="alarmMode" data-current="{{ alarm_mode }}">
-              <option value="random" {{ "selected" if alarm_mode == "random" else "" }}>Aléatoire</option>
-              <option value="playlist" {{ "selected" if alarm_mode == "playlist" else "" }}>Playlist réveil</option>
+              <optgroup id="alarmPlaylistOptions" label="Playlists locales">
+                <option value="random" {{ "selected" if alarm_mode == "random" else "" }}>Aléatoire — Réveil</option>
+                <option value="playlist" {{ "selected" if alarm_mode == "playlist" else "" }}>Playlist — Réveil</option>
+              </optgroup>
               <optgroup id="alarmRadioOptions" label="Radios"></optgroup>
             </select>
           </div>
@@ -138,17 +140,12 @@
           <form action="/test" method="post">
             <button id="testSoundFromSettings" class="action test" type="submit">🎧 Tester le son</button>
           </form>
-
-          <button id="updatePlaylistButton" class="action secondary-action" type="button">
-            🔄 Mettre à jour la playlist
-          </button>
-          <p id="updatePlaylistStatus" class="small"></p>
+<p id="updatePlaylistStatus" class="small"></p>
         </div>
 
         <p id="fadeStatus" class="small"></p>
       </div>
     </section>
-
     <footer>
       tu peux toujours rêver
     </footer>

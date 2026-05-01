@@ -28,3 +28,5 @@ config/reveil_settings.conf
 # OS / éditeurs
 Thumbs.db
 .vscode/
+config/playlists.json
+config/alarm_presets.json

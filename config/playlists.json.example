@@ -1,0 +1,12 @@
+{
+  "playlists": {
+    "reveil": {
+      "label": "Réveil",
+      "url": "https://www.youtube.com/watch?v=R8pQBHf11MI&list=PLrbU3Fer_FqZQAknct-7GO-ANrXhfb2Mt",
+      "output_dir": "/home/kxsbpi/music/reveil",
+      "loudness_file": "/home/kxsbpi/reveil/data/loudness_index.json",
+      "target_lufs": -18,
+      "min_audio_files": 3
+    }
+  }
+}

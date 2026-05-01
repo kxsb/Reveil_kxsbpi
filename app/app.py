@@ -14,7 +14,9 @@ from services.paths import (
     PLAY_URL_SCRIPT,
     PLAY_FILE_SCRIPT,
     UPDATE_SCRIPT,
+    SYNC_PLAYLIST_SCRIPT,
     MUSIC_DIR,
+    MUSIC_ROOT,
     STATE_FILE,
     RADIO_STATIONS_FILE,
     ensure_runtime_dirs,
@@ -44,6 +46,16 @@ from services.player_service import (
 )
 
 from services.system_service import system_overview as get_system_overview
+from services.alarm_preset_service import (
+    list_alarm_presets,
+    add_alarm_preset,
+    apply_alarm_preset,
+)
+from services.playlist_service import (
+    list_playlists,
+    add_or_update_playlist,
+    list_playlist_files,
+)
 
 
 @app.route("/")
@@ -134,7 +146,11 @@ AUDIO_EXTENSIONS = {".mp3", ".m4a", ".aac", ".opus", ".ogg", ".oga", ".wav", ".f
 
 def safe_music_file(rel_path):
     """
-    Valide un chemin relatif dans MUSIC_DIR.
+    Valide un chemin relatif audio.
+
+    Priorité :
+    - chemin relatif depuis MUSIC_ROOT, ex: playlists/test/son.webm ;
+    - fallback legacy depuis MUSIC_DIR, ex: 01 - morceau.webm.
 
     Refuse :
     - chemins absolus ;
@@ -152,21 +168,106 @@ def safe_music_file(rel_path):
     if rel.is_absolute() or ".." in rel.parts:
         return None, "Chemin invalide"
 
-    candidate = (MUSIC_DIR / rel).resolve()
-    root = MUSIC_DIR.resolve()
+    roots = [MUSIC_ROOT, MUSIC_DIR]
+
+    for root in roots:
+        root = root.resolve()
+        candidate = (root / rel).resolve()
+
+        try:
+            candidate.relative_to(root)
+        except ValueError:
+            continue
+
+        if candidate.suffix.lower() not in AUDIO_EXTENSIONS:
+            continue
+
+        if candidate.is_file():
+            return candidate, ""
+
+    return None, "Fichier introuvable"
+
+@app.route("/music_browser")
+def music_browser():
+    rel_path = request.args.get("path", "").strip()
+    rel = Path(rel_path)
+
+    if rel.is_absolute() or ".." in rel.parts:
+        return jsonify({
+            "ok": False,
+            "message": "Chemin invalide",
+        })
+
+    root = MUSIC_ROOT.resolve()
+    current = (root / rel).resolve()
 
     try:
-        candidate.relative_to(root)
+        current.relative_to(root)
     except ValueError:
-        return None, "Chemin hors dossier musique"
+        return jsonify({
+            "ok": False,
+            "message": "Chemin hors dossier musique",
+        })
 
-    if candidate.suffix.lower() not in AUDIO_EXTENSIONS:
-        return None, "Format audio non autorisé"
+    if not current.exists() or not current.is_dir():
+        return jsonify({
+            "ok": False,
+            "message": "Dossier introuvable",
+        })
 
-    if not candidate.is_file:
-        return None, "Fichier introuvable"
+    dirs = []
+    files = []
 
-    return candidate, ""
+    for path in sorted(current.iterdir(), key=lambda p: (not p.is_dir(), p.name.lower())):
+        if path.name.startswith("."):
+            continue
+
+        item_rel = path.relative_to(root).as_posix()
+
+        if path.is_dir():
+            dirs.append({
+                "type": "folder",
+                "path": item_rel,
+                "label": path.name,
+            })
+            continue
+
+        if not path.is_file():
+            continue
+
+        if path.suffix.lower() not in AUDIO_EXTENSIONS:
+            continue
+
+        label = path.stem
+
+        if len(label) > 5 and label[:2].isdigit() and label[2:5] == " - ":
+            label = label[5:]
+
+        try:
+            size = path.stat().st_size
+        except OSError:
+            size = 0
+
+        files.append({
+            "type": "file",
+            "path": item_rel,
+            "label": label,
+            "filename": path.name,
+            "size": size,
+        })
+
+    parent = ""
+    if rel_path:
+        parent_path = rel.parent.as_posix()
+        parent = "" if parent_path == "." else parent_path
+
+    return jsonify({
+        "ok": True,
+        "path": "" if rel_path in ["", "."] else rel.as_posix(),
+        "parent": parent,
+        "dirs": dirs,
+        "files": files,
+    })
 
 
 @app.route("/music_files")
@@ -277,10 +378,6 @@ def stop():
     return jsonify({"ok": True, "message": "⏹ Lecture arrêtée"})
 
 
-@app.route("/update_playlist", methods=["POST"])
-def update_playlist():
-    run_process(["/bin/bash", UPDATE_SCRIPT])
-    return jsonify({"ok": True, "message": "🔄 Mise à jour playlist lancée"})
 
 @app.route("/settings_ajax", methods=["POST"])
 def settings_ajax():
@@ -313,6 +410,53 @@ def settings_ajax():
         "settings": settings
     })
 
+@app.route("/alarm_presets")
+def alarm_presets():
+    return jsonify({
+        "ok": True,
+        "presets": list_alarm_presets(),
+    })
+
+
+@app.route("/alarm_presets", methods=["POST"])
+def save_alarm_preset():
+    label = request.form.get("label", "").strip()
+    time_value = request.form.get("time", "").strip()
+    mode = request.form.get("mode", "").strip()
+
+    settings = {
+        "ENABLE_FADE": request.form.get("ENABLE_FADE", "1"),
+        "INITIAL_VOLUME": request.form.get("INITIAL_VOLUME", "5"),
+        "MAX_VOLUME": request.form.get("MAX_VOLUME", "80"),
+        "FADE_DURATION": request.form.get("FADE_DURATION", "120"),
+        "FADE_CURVE": request.form.get("FADE_CURVE", "ease_out"),
+    }
+
+    item, error = add_alarm_preset(label, time_value, mode, settings)
+
+    if error:
+        return jsonify({
+            "ok": False,
+            "message": error,
+        })
+
+    return jsonify({
+        "ok": True,
+        "preset": item,
+        "message": "Modèle enregistré",
+    })
+
+
+@app.route("/apply_alarm_preset/<preset_id>", methods=["POST"])
+def apply_alarm_preset_route(preset_id):
+    ok, message = apply_alarm_preset(preset_id)
+
+    return jsonify({
+        "ok": ok,
+        "message": message,
+    })
+
+
 @app.route("/alarm_status")
 def alarm_status():
     alarm_time, alarm_mode = parse_alarm()
@@ -339,6 +483,61 @@ def radio_now(station_id):
 
     return jsonify(data)
 
+
+
+@app.route("/playlists")
+def playlists():
+    return jsonify({
+        "ok": True,
+        "playlists": list_playlists(),
+    })
+
+
+@app.route("/playlists", methods=["POST"])
+def save_playlist():
+    playlist_id = request.form.get("playlist_id", "").strip()
+    label = request.form.get("label", "").strip()
+    url = request.form.get("url", "").strip()
+
+    item, error = add_or_update_playlist(playlist_id, label, url)
+
+    if error:
+        return jsonify({
+            "ok": False,
+            "message": error,
+        })
+
+    return jsonify({
+        "ok": True,
+        "playlist": item,
+        "message": "Playlist enregistrée",
+    })
+
+
+@app.route("/playlist_files/<playlist_id>")
+def playlist_files(playlist_id):
+    data, error = list_playlist_files(playlist_id)
+
+    if error:
+        return jsonify({
+            "ok": False,
+            "message": error,
+        })
+
+    return jsonify({
+        "ok": True,
+        **data,
+    })
+
+
+@app.route("/sync_playlist/<playlist_id>", methods=["POST"])
+def sync_playlist(playlist_id):
+    run_process(["python3", SYNC_PLAYLIST_SCRIPT, playlist_id])
+
+    return jsonify({
+        "ok": True,
+        "message": "Synchronisation lancée",
+    })
 
 
 @app.route("/system_overview")

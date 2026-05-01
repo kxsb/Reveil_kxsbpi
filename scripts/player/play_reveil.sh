@@ -30,17 +30,22 @@ mkdir -p "$BASE/logs" "$STATE_DIR"
 SOCKET="/tmp/mpv_socket"
 
 MODE="${1:-playlist}"
-STATION_ID="${2:-fip}"
+SOURCE_ID="${2:-reveil}"
 PLAYER_CONTEXT="${3:-alarm}"
 RADIO_STATIONS_FILE="$BASE/config/radio_stations.json"
+PLAYLISTS_FILE="$BASE/config/playlists.json"
 
 if [ "$MODE" = "fip" ]; then
   MODE="radio"
-  STATION_ID="fip"
+  SOURCE_ID="fip"
 fi
 
-if [ "$MODE" != "radio" ]; then
+if [ "$MODE" = "radio" ]; then
+  STATION_ID="${SOURCE_ID:-fip}"
+  PLAYLIST_ID=""
+else
   STATION_ID=""
+  PLAYLIST_ID="${SOURCE_ID:-reveil}"
 fi
 
 # ----------------------------------------------------------------------------
@@ -334,6 +339,66 @@ case "$ENABLE_FADE" in
   *) ENABLE_FADE="1" ;;
 esac
 
+playlist_output_dir() {
+  local playlist_id="${1:-reveil}"
+
+  if [ "$playlist_id" = "reveil" ]; then
+    echo "$HOME/music/reveil"
+    return 0
+  fi
+
+  if [ -f "$PLAYLISTS_FILE" ]; then
+    python3 - "$PLAYLISTS_FILE" "$playlist_id" <<'PY'
+import json
+import sys
+
+config_path, playlist_id = sys.argv[1], sys.argv[2]
+
+try:
+    data = json.load(open(config_path, encoding="utf-8"))
+    playlist = (data.get("playlists") or {}).get(playlist_id) or {}
+    print(playlist.get("output_dir") or f"/home/kxsbpi/music/playlists/{playlist_id}")
+except Exception:
+    print(f"/home/kxsbpi/music/playlists/{playlist_id}")
+PY
+  else
+    echo "$HOME/music/playlists/$playlist_id"
+  fi
+}
+
+playlist_loudness_file() {
+  local playlist_id="${1:-reveil}"
+
+  if [ "$playlist_id" = "reveil" ]; then
+    echo "$BASE/data/loudness_index.json"
+    return 0
+  fi
+
+  if [ -f "$PLAYLISTS_FILE" ]; then
+    python3 - "$PLAYLISTS_FILE" "$playlist_id" "$BASE" <<'PY'
+import json
+import sys
+
+config_path, playlist_id, base = sys.argv[1], sys.argv[2], sys.argv[3]
+
+try:
+    data = json.load(open(config_path, encoding="utf-8"))
+    playlist = (data.get("playlists") or {}).get(playlist_id) or {}
+    print(playlist.get("loudness_file") or f"{base}/data/loudness_{playlist_id}.json")
+except Exception:
+    print(f"{base}/data/loudness_{playlist_id}.json")
+PY
+  else
+    echo "$BASE/data/loudness_$playlist_id.json"
+  fi
+}
+
+if [ "$MODE" != "radio" ]; then
+  MUSIC_DIR="$(playlist_output_dir "$PLAYLIST_ID")"
+  LOUDNESS_INDEX="$(playlist_loudness_file "$PLAYLIST_ID")"
+  log "Playlist locale sélectionnée : id=$PLAYLIST_ID dir=$MUSIC_DIR loudness=$LOUDNESS_INDEX"
+fi
+
 # ----------------------------------------------------------------------------
 # Récupération de la source audio
 # ----------------------------------------------------------------------------
@@ -372,11 +437,11 @@ else
   fi
 
   if [ "$MODE" = "random" ]; then
-    log "Mode random : mélange de la playlist"
+    log "Mode random : mélange de la playlist id=${PLAYLIST_ID:-reveil}"
     mapfile -d '' TRACKS < <(printf '%s\0' "${TRACKS[@]}" | shuf -z)
   fi
 
-  log "Playlist détectée : ${#TRACKS[@]} piste(s)"
+  log "Playlist détectée id=${PLAYLIST_ID:-reveil} : ${#TRACKS[@]} piste(s)"
 fi
 
 # ----------------------------------------------------------------------------

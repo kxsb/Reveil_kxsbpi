@@ -1,0 +1,34 @@
+{
+  "meta": {
+    "target_lufs": -18.0,
+    "max_gain_abs_db": 8.0,
+    "root": "/home/kxsbpi/music/playlists/test",
+    "path_mode": "relative"
+  },
+  "tracks": {
+    "01 - SOFIA ISELLA - The Chicken is Naked and Afraid ｜ A COLORS SHOW.webm": {
+      "input_i": -7.66,
+      "input_tp": 1.4,
+      "input_lra": 4.8,
+      "input_thresh": -17.92,
+      "output_i": -17.26,
+      "output_tp": -1.5,
+      "output_lra": 4.5,
+      "output_thresh": -27.39,
+      "target_offset": -0.74,
+      "recommended_gain_db": -8.0
+    },
+    "02 - Nayra - Ma quête ｜ Dazzle Live.webm": {
+      "input_i": -9.96,
+      "input_tp": 1.39,
+      "input_lra": 8.4,
+      "input_thresh": -20.27,
+      "output_i": -17.21,
+      "output_tp": -1.5,
+      "output_lra": 5.9,
+      "output_thresh": -27.32,
+      "target_offset": -0.79,
+      "recommended_gain_db": -8.0
+    }
+  }
+}

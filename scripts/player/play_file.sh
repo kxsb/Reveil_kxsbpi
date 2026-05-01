@@ -2,6 +2,7 @@
 set -u
 
 BASE_DIR="/home/kxsbpi/reveil"
+MUSIC_ROOT="/home/kxsbpi/music"
 MUSIC_DIR="/home/kxsbpi/music/reveil"
 
 STATE_DIR="$BASE_DIR/state"
@@ -120,10 +121,18 @@ case "$REL_PATH" in
     ;;
 esac
 
-FILE_PATH="$MUSIC_DIR/$REL_PATH"
+# Priorité au chemin relatif depuis /home/kxsbpi/music.
+# Exemple : playlists/test/morceau.webm
+FILE_PATH="$MUSIC_ROOT/$REL_PATH"
+
+# Compat legacy : si le chemin vient encore de /music_files,
+# il est relatif à /home/kxsbpi/music/reveil.
+if [ ! -f "$FILE_PATH" ]; then
+  FILE_PATH="$MUSIC_DIR/$REL_PATH"
+fi
 
 if [ ! -f "$FILE_PATH" ]; then
-  log "Erreur lecteur local : fichier introuvable $FILE_PATH"
+  log "Erreur lecteur local : fichier introuvable $REL_PATH"
   write_state_stopped
   exit 1
 fi

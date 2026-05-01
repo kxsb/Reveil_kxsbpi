@@ -172,31 +172,6 @@ document.querySelectorAll("form[action]:not([data-player-url-form])").forEach((f
   });
 });
 
-const updatePlaylistButton = document.getElementById("updatePlaylistButton");
-const updatePlaylistStatus = document.getElementById("updatePlaylistStatus");
-
-if (updatePlaylistButton && updatePlaylistStatus) {
-  updatePlaylistButton.addEventListener("click", async () => {
-    updatePlaylistStatus.textContent = "Mise à jour lancée…";
-
-    try {
-      const res = await fetch("/update_playlist", {
-        method: "POST",
-      });
-
-      const json = await res.json();
-
-      if (json.ok) {
-        updatePlaylistStatus.textContent = json.message;
-      } else {
-        updatePlaylistStatus.textContent = "⚠️ Erreur pendant le lancement";
-      }
-    } catch (e) {
-      updatePlaylistStatus.textContent = "❌ Erreur réseau";
-    }
-  });
-}
-
 const heroNextAlarm = document.getElementById("heroNextAlarm");
 const dashboardLabel = document.getElementById("dashboardLabel");
 const dashboardTime = document.getElementById("dashboardTime");
@@ -321,23 +296,29 @@ async function updateRadioNow(stationId) {
 
 async function loadRadioStations() {
   try {
-    const res = await fetch("/radio_stations");
-    const data = await res.json();
+    const [radioRes, playlistsRes] = await Promise.all([
+      fetch("/radio_stations"),
+      fetch("/playlists"),
+    ]);
 
-    if (!data.ok) return;
+    const radioData = await radioRes.json();
+    const playlistsData = await playlistsRes.json();
 
-    const stations = data.stations || {};
+    if (!radioData.ok) return;
+
+    const stations = radioData.stations || {};
+    const playlists = playlistsData.ok ? (playlistsData.playlists || []) : [];
+
     buildRadioMenu(stations);
-    buildAlarmSourceOptions(stations);
-    updateAlarmSourceBadge(stations);
+    buildAlarmSourceOptions(stations, playlists);
+    updateAlarmSourceBadge(stations, playlists);
 
   } catch (e) {
-    console.error("radio_stations error", e);
+    console.error("source loading error", e);
   }
 }
 
 function buildRadioMenu(stations) {
-  const radioMenu = document.getElementById("radioMenu");
   if (!radioMenu) return;
 
   radioMenu.innerHTML = "";
@@ -530,30 +511,67 @@ function updatePlaybackUx(data) {
   markHomePlayingTile(data);
 }
 
-function buildAlarmSourceOptions(stations) {
+function buildAlarmSourceOptions(stations, playlists = []) {
   if (!alarmMode) return;
 
+  const playlistGroup = document.getElementById("alarmPlaylistOptions");
   const radioGroup = document.getElementById("alarmRadioOptions");
-  if (!radioGroup) return;
 
   const current = alarmMode.dataset.current || alarmMode.value;
 
-  radioGroup.innerHTML = "";
+  if (playlistGroup) {
+    playlistGroup.innerHTML = "";
 
-  Object.entries(stations).forEach(([id, station]) => {
-    const option = document.createElement("option");
-    option.value = `radio:${id}`;
-    option.textContent = `Radio — ${station.label || id}`;
+    const normalizedPlaylists =
+      Array.isArray(playlists) && playlists.length > 0
+        ? playlists
+        : [{ id: "reveil", label: "Réveil" }];
 
-    if (current === option.value) {
-      option.selected = true;
-    }
+    normalizedPlaylists.forEach((playlist) => {
+      const id = playlist.id || "reveil";
+      const label = playlist.label || id;
 
-    radioGroup.appendChild(option);
-  });
+      [
+        [`random:${id}`, `Aléatoire — ${label}`],
+        [`playlist:${id}`, `Playlist — ${label}`],
+      ].forEach(([value, text]) => {
+        const option = document.createElement("option");
+
+        // Compat historique : les valeurs reveil peuvent rester random/playlist.
+        if (id === "reveil") {
+          option.value = value.startsWith("random") ? "random" : "playlist";
+        } else {
+          option.value = value;
+        }
+
+        option.textContent = text;
+
+        if (current === option.value || current === value) {
+          option.selected = true;
+        }
+
+        playlistGroup.appendChild(option);
+      });
+    });
+  }
+
+  if (radioGroup) {
+    radioGroup.innerHTML = "";
+
+    Object.entries(stations).forEach(([id, station]) => {
+      const option = document.createElement("option");
+      option.value = `radio:${id}`;
+      option.textContent = `Radio — ${station.label || id}`;
+
+      if (current === option.value) {
+        option.selected = true;
+      }
+
+      radioGroup.appendChild(option);
+    });
+  }
 }
 
-let latestPlaybackData = null;
 
 // Surveille le statut player avec un seul fetch partagé.
 async function playerTick() {
@@ -617,11 +635,26 @@ if (alarmDashboard && alarmInlineEditor) {
   });
 }
 
-function formatAlarmModeLabel(mode, stations = {}) {
+function formatAlarmModeLabel(mode, stations = {}, playlists = []) {
   if (!mode) return "Source";
 
-  if (mode === "playlist") return "Playlist réveil";
-  if (mode === "random") return "Aléatoire";
+  const playlistById = {};
+  (playlists || []).forEach((playlist) => {
+    playlistById[playlist.id] = playlist;
+  });
+
+  if (mode === "playlist") return "Playlist — Réveil";
+  if (mode === "random") return "Aléatoire — Réveil";
+
+  if (mode.startsWith("playlist:") || mode.startsWith("random:")) {
+    const [kind, playlistId] = mode.split(":");
+    const playlist = playlistById[playlistId];
+    const label = playlist ? (playlist.label || playlistId) : playlistId;
+
+    return kind === "random"
+      ? `Aléatoire — ${label}`
+      : `Playlist — ${label}`;
+  }
 
   if (mode.startsWith("radio:")) {
     const stationId = mode.split(":")[1] || "";
@@ -634,11 +667,12 @@ function formatAlarmModeLabel(mode, stations = {}) {
   return mode;
 }
 
-function updateAlarmSourceBadge(stations = {}) {
+
+function updateAlarmSourceBadge(stations = {}, playlists = []) {
   const badge = document.getElementById("alarmSourceBadge");
   if (!badge || !alarmMode) return;
 
-  badge.textContent = formatAlarmModeLabel(alarmMode.value || alarmMode.dataset.current, stations);
+  badge.textContent = formatAlarmModeLabel(alarmMode.value || alarmMode.dataset.current, stations, playlists);
 }
 
 function showActionStatus(message, duration = 2500) {
@@ -1108,4 +1142,334 @@ async function loadSystemOverview() {
 
 if (systemOverviewButton && systemOverviewPanel) {
   systemOverviewButton.addEventListener("click", loadSystemOverview);
+}
+
+
+// ===============================
+// Config Pi : gestion playlists
+// ===============================
+
+const playlistManagerButton = document.getElementById("playlistManagerButton");
+const playlistManagerPanel = document.getElementById("playlistManagerPanel");
+const playlistList = document.getElementById("playlistList");
+const playlistForm = document.getElementById("playlistForm");
+
+let playlistsLoaded = false;
+
+function renderPlaylists(items) {
+  if (!playlistList) return;
+
+  playlistList.innerHTML = "";
+
+  if (!items || items.length === 0) {
+    playlistList.innerHTML = `<p class="small">Aucune playlist configurée.</p>`;
+    return;
+  }
+
+  items.forEach((item) => {
+    const card = document.createElement("article");
+    card.className = "playlist-card";
+
+    card.innerHTML = `
+      <div class="playlist-card-main">
+        <strong>${item.label || item.id}</strong>
+        <small>${item.id} · ${item.output_dir || ""}</small>
+      </div>
+      <button class="secondary-action playlist-sync-button" type="button">Sync</button>
+      <div class="playlist-files hidden" data-playlist-files="${item.id}"></div>
+    `;
+
+    const syncButton = card.querySelector(".playlist-sync-button");
+    const filesPanel = card.querySelector(".playlist-files");
+
+    card.addEventListener("click", async (event) => {
+      if (event.target.closest(".playlist-sync-button")) return;
+
+      if (!filesPanel) return;
+
+      filesPanel.classList.toggle("hidden");
+
+      if (filesPanel.dataset.loaded === "1") {
+        return;
+      }
+
+      filesPanel.innerHTML = `<p class="small">Lecture du dossier…</p>`;
+
+      try {
+        const res = await fetch(`/playlist_files/${item.id}`, { cache: "no-store" });
+        const data = await res.json();
+
+        if (!data.ok) {
+          throw new Error(data.message || "Erreur fichiers playlist");
+        }
+
+        const files = data.files || [];
+
+        if (files.length === 0) {
+          filesPanel.innerHTML = `
+            <p class="small playlist-empty">
+              Aucun fichier audio local dans ce dossier.
+            </p>
+          `;
+        } else {
+          filesPanel.innerHTML = `
+            <div class="playlist-files-meta">
+              ${files.length} fichier(s) · ${data.output_dir || ""}
+            </div>
+            ${files.map((file) => `
+              <div class="playlist-file-row">
+                <span>${file.label || file.filename}</span>
+                <small>${file.size_label || ""}</small>
+              </div>
+            `).join("")}
+          `;
+        }
+
+        filesPanel.dataset.loaded = "1";
+      } catch (e) {
+        filesPanel.innerHTML = `<p class="small playlist-empty">Impossible de lire le dossier.</p>`;
+      }
+    });
+
+
+    syncButton.addEventListener("click", async () => {
+      syncButton.disabled = true;
+      syncButton.textContent = "Sync…";
+
+      try {
+        const res = await fetch(`/sync_playlist/${item.id}`, { method: "POST" });
+        const json = await res.json();
+
+        if (actionStatus) {
+          actionStatus.textContent = json.message || "Synchronisation lancée";
+        }
+
+        syncButton.textContent = "Lancée";
+      } catch (e) {
+        syncButton.textContent = "Erreur";
+        if (actionStatus) actionStatus.textContent = "Erreur sync playlist";
+      } finally {
+        setTimeout(() => {
+          syncButton.disabled = false;
+          syncButton.textContent = "Sync";
+        }, 2500);
+      }
+    });
+
+    playlistList.appendChild(card);
+  });
+}
+
+async function loadPlaylists() {
+  if (!playlistList) return;
+
+  playlistList.innerHTML = `<p class="small">Lecture des playlists…</p>`;
+
+  try {
+    const res = await fetch("/playlists", { cache: "no-store" });
+    const data = await res.json();
+
+    if (!data.ok) {
+      throw new Error("Erreur playlists");
+    }
+
+    renderPlaylists(data.playlists || []);
+    playlistsLoaded = true;
+  } catch (e) {
+    playlistList.innerHTML = `<p class="small">Impossible de lire les playlists.</p>`;
+  }
+}
+
+if (playlistManagerButton && playlistManagerPanel) {
+  playlistManagerButton.addEventListener("click", async () => {
+    playlistManagerPanel.classList.toggle("hidden");
+
+    if (!playlistsLoaded) {
+      await loadPlaylists();
+    }
+  });
+}
+
+if (playlistForm) {
+  playlistForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const data = new FormData(playlistForm);
+
+    if (actionStatus) {
+      actionStatus.textContent = "Enregistrement…";
+    }
+
+    try {
+      const res = await fetch("/playlists", {
+        method: "POST",
+        body: data,
+      });
+
+      const json = await res.json();
+
+      if (actionStatus) {
+        actionStatus.textContent = json.message || (json.ok ? "Playlist enregistrée" : "Erreur");
+      }
+
+      if (json.ok) {
+        playlistForm.reset();
+        await loadPlaylists();
+      }
+    } catch (e) {
+      if (actionStatus) {
+        actionStatus.textContent = "Erreur réseau";
+      }
+    }
+  });
+}
+
+
+// ===============================
+// Lecteur : navigateur dossier musique
+// ===============================
+
+let musicBrowserCurrentPath = "";
+
+function musicBrowserTitle(path) {
+  if (!path) return "Dossier musique";
+  return path;
+}
+
+function formatMusicSize(bytes) {
+  const value = Number(bytes || 0);
+
+  if (value <= 0) return "";
+
+  const units = ["o", "Ko", "Mo", "Go"];
+  let size = value;
+  let index = 0;
+
+  while (size >= 1024 && index < units.length - 1) {
+    size = size / 1024;
+    index += 1;
+  }
+
+  return index === 0 ? `${Math.round(size)} ${units[index]}` : `${size.toFixed(1)} ${units[index]}`;
+}
+
+// Surcharge volontaire de loadMusicLibrary.
+// L'ancien lecteur plat /music_files reste disponible côté API,
+// mais l'interface utilise maintenant /music_browser.
+async function loadMusicLibrary(path = "") {
+  if (!musicLibraryList) return;
+
+  musicBrowserCurrentPath = path || "";
+  musicLibraryList.innerHTML = `<p class="small music-empty">Lecture du dossier…</p>`;
+
+  try {
+    const res = await fetch(`/music_browser?path=${encodeURIComponent(musicBrowserCurrentPath)}`, {
+      cache: "no-store",
+    });
+
+    const data = await res.json();
+
+    if (!data.ok) {
+      throw new Error(data.message || "Erreur dossier musique");
+    }
+
+    const dirs = data.dirs || [];
+    const files = data.files || [];
+
+    if (musicLibraryCount) {
+      const count = dirs.length + files.length;
+      musicLibraryCount.textContent = count ? `${count} élément(s)` : "";
+    }
+
+    musicLibraryList.innerHTML = "";
+
+    const header = document.createElement("div");
+    header.className = "music-browser-header";
+
+    header.innerHTML = `
+      <span>${musicBrowserTitle(data.path || "")}</span>
+      ${data.path ? `<button type="button" class="music-browser-back">← Retour</button>` : ""}
+    `;
+
+    const backButton = header.querySelector(".music-browser-back");
+
+    if (backButton) {
+      backButton.addEventListener("click", () => {
+        loadMusicLibrary(data.parent || "");
+      });
+    }
+
+    musicLibraryList.appendChild(header);
+
+    if (dirs.length === 0 && files.length === 0) {
+      const empty = document.createElement("p");
+      empty.className = "small music-empty";
+      empty.textContent = "Dossier vide.";
+      musicLibraryList.appendChild(empty);
+      musicLibraryLoaded = true;
+      return;
+    }
+
+    dirs.forEach((folder) => {
+      const button = document.createElement("button");
+      button.className = "music-folder-choice";
+      button.type = "button";
+
+      button.innerHTML = `
+        <span>📁 ${folder.label}</span>
+        <small>${folder.path}</small>
+      `;
+
+      button.addEventListener("click", () => {
+        loadMusicLibrary(folder.path);
+      });
+
+      musicLibraryList.appendChild(button);
+    });
+
+    files.forEach((file) => {
+      const button = document.createElement("button");
+      button.className = "music-file-choice";
+      button.type = "button";
+      button.dataset.path = file.path;
+
+      button.innerHTML = `
+        <span>${file.label || file.filename}</span>
+        <small>${file.filename}${file.size ? ` · ${formatMusicSize(file.size)}` : ""}</small>
+      `;
+
+      button.addEventListener("click", async () => {
+        const formData = new FormData();
+        formData.append("path", file.path);
+
+        if (actionStatus) actionStatus.textContent = "Lancement…";
+
+        try {
+          const res = await fetch("/play_file", {
+            method: "POST",
+            body: formData,
+          });
+
+          const json = await res.json();
+
+          if (actionStatus) {
+            actionStatus.textContent = json.message || (json.ok ? "Lecture lancée" : "Erreur");
+          }
+
+          if (json.ok) {
+            musicLibraryList.classList.add("hidden");
+            setTimeout(playerTick, 1200);
+          }
+        } catch (e) {
+          if (actionStatus) actionStatus.textContent = "Erreur réseau";
+        }
+      });
+
+      musicLibraryList.appendChild(button);
+    });
+
+    musicLibraryLoaded = true;
+  } catch (e) {
+    musicLibraryList.innerHTML = `<p class="small music-empty">Impossible de lire le dossier musique.</p>`;
+  }
 }

@@ -1,0 +1,28 @@
+{
+  "presets": {
+    "reveil_doux": {
+      "label": "Réveil doux",
+      "time": "07:30",
+      "mode": "random",
+      "settings": {
+        "ENABLE_FADE": "1",
+        "INITIAL_VOLUME": "5",
+        "MAX_VOLUME": "60",
+        "FADE_DURATION": "180",
+        "FADE_CURVE": "ease_out"
+      }
+    },
+    "reveil_franc": {
+      "label": "Réveil franc",
+      "time": "07:30",
+      "mode": "playlist",
+      "settings": {
+        "ENABLE_FADE": "1",
+        "INITIAL_VOLUME": "15",
+        "MAX_VOLUME": "80",
+        "FADE_DURATION": "60",
+        "FADE_CURVE": "linear"
+      }
+    }
+  }
+}

@@ -34,6 +34,21 @@
       </button>
 
       <div id="systemOverviewPanel" class="system-overview hidden" aria-live="polite"></div>
+
+      <button id="playlistManagerButton" class="action secondary-action playlist-manager-button" type="button">
+        Gestion des playlists
+      </button>
+
+      <div id="playlistManagerPanel" class="playlist-manager hidden" aria-live="polite">
+        <div id="playlistList" class="playlist-list"></div>
+
+        <form id="playlistForm" class="playlist-form">
+          <input name="playlist_id" placeholder="id, ex: chill" autocomplete="off" required>
+          <input name="label" placeholder="nom affiché" autocomplete="off" required>
+          <input name="url" placeholder="URL YouTube playlist" inputmode="url" autocomplete="off" required>
+          <button class="action" type="submit">Ajouter</button>
+        </form>
+      </div>
     </section>
 
     <p id="actionStatus" class="small action-status"></p>

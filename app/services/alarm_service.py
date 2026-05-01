@@ -6,6 +6,7 @@ from services.paths import REVEIL_FILE, WEB_LOG_FILE
 ALLOWED_SIMPLE_MODES = ["playlist", "random", "fip"]
 TIME_RE = re.compile(r"^([01][0-9]|2[0-3]):[0-5][0-9]$")
 STATION_RE = re.compile(r"^[a-zA-Z0-9_-]+$")
+SOURCE_ID_RE = STATION_RE
 
 
 def _log(msg):
@@ -32,33 +33,51 @@ def _normalize_alarm_source(mode):
     UI:
       random
       playlist
+      random:reveil
+      playlist:reveil
+      random:test
+      playlist:test
       radio:fip
-      radio:pulsar
 
     Fichier:
       HH:MM random
       HH:MM playlist
+      HH:MM random test
+      HH:MM playlist test
       HH:MM radio fip
     """
     mode = (mode or "").strip()
 
+    # Compat ancienne UI.
     if mode in ALLOWED_SIMPLE_MODES:
         if mode == "fip":
             return "radio", "fip"
         return mode, ""
 
-    if mode.startswith("radio:"):
-        station_id = mode.split(":", 1)[1].strip()
+    if ":" in mode:
+        kind, source_id = mode.split(":", 1)
+        kind = kind.strip()
+        source_id = source_id.strip()
 
-        if STATION_RE.match(station_id):
-            return "radio", station_id
+        if kind in ["playlist", "random"]:
+            if SOURCE_ID_RE.match(source_id):
+                # Compat historique : reveil reste sans troisième champ.
+                if source_id == "reveil":
+                    return kind, ""
+                return kind, source_id
 
-        _log(f"Station radio invalide refusée : {station_id}")
-        return "random", ""
+            _log(f"Playlist invalide refusée : {source_id}")
+            return "random", ""
+
+        if kind == "radio":
+            if SOURCE_ID_RE.match(source_id):
+                return "radio", source_id
+
+            _log(f"Station radio invalide refusée : {source_id}")
+            return "random", ""
 
     _log(f"Mode invalide remplacé par random : {mode}")
     return "random", ""
-
 
 def write_alarm(time_value, mode):
     if not TIME_RE.match(time_value):
@@ -69,9 +88,9 @@ def write_alarm(time_value, mode):
 
     REVEIL_FILE.parent.mkdir(parents=True, exist_ok=True)
 
-    if normalized_mode == "radio":
-        REVEIL_FILE.write_text(f"{time_value} radio {station_id}\n", encoding="utf-8")
-        _log(f"Réveil réglé : {time_value} radio {station_id}")
+    if station_id:
+        REVEIL_FILE.write_text(f"{time_value} {normalized_mode} {station_id}\n", encoding="utf-8")
+        _log(f"Réveil réglé : {time_value} {normalized_mode} {station_id}")
     else:
         REVEIL_FILE.write_text(f"{time_value} {normalized_mode}\n", encoding="utf-8")
         _log(f"Réveil réglé : {time_value} {normalized_mode}")
@@ -83,13 +102,22 @@ def parse_alarm():
     raw = read_alarm()
     parts = raw.split()
 
-    if len(parts) >= 3 and TIME_RE.match(parts[0]) and parts[1] == "radio":
-        station_id = parts[2] if STATION_RE.match(parts[2]) else "fip"
-        return parts[0], f"radio:{station_id}"
+    if len(parts) >= 3 and TIME_RE.match(parts[0]):
+        mode = parts[1]
+        source_id = parts[2] if SOURCE_ID_RE.match(parts[2]) else ""
+
+        if mode == "radio":
+            return parts[0], f"radio:{source_id or 'fip'}"
+
+        if mode in ["playlist", "random"]:
+            if source_id:
+                return parts[0], f"{mode}:{source_id}"
+            return parts[0], mode
 
     if len(parts) >= 2 and TIME_RE.match(parts[0]):
         mode = parts[1]
 
+        # Compat legacy.
         if mode == "fip":
             return parts[0], "radio:fip"
 
@@ -100,7 +128,6 @@ def parse_alarm():
         return raw, "random"
 
     return "", "random"
-
 
 def next_alarm_label():
     alarm_time, _alarm_mode = parse_alarm()
