@@ -747,3 +747,334 @@ footer {
     radial-gradient(circle at center, rgba(97,211,148,.18), rgba(255,255,255,.06));
   box-shadow: 0 0 22px rgba(97,211,148,.16);
 }
+
+/* =========================================================
+   UI POLISH V2 — cohérence minimale
+   ========================================================= */
+
+.hero {
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.hero h1 {
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+}
+
+.home-link,
+.pill {
+  border: 1px solid rgba(255,255,255,.06);
+  background: rgba(255,255,255,.075);
+}
+
+.dashboard {
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at top left, rgba(255,255,255,.055), transparent 34%),
+    linear-gradient(135deg, rgba(255,255,255,.025), transparent 48%);
+  opacity: .9;
+}
+
+.dashboard > * {
+  position: relative;
+  z-index: 1;
+}
+
+.dashboard-label {
+  font-size: .86rem;
+  letter-spacing: .015em;
+}
+
+.dashboard-time {
+  letter-spacing: -0.045em;
+  line-height: 1.05;
+}
+
+.dashboard-sub {
+  line-height: 1.45;
+}
+
+.actions {
+  display: grid;
+  gap: 12px;
+}
+
+.action-status {
+  min-height: 1.2em;
+  margin: 2px 0 2px;
+  color: var(--muted);
+  opacity: .86;
+}
+
+.footer-signature,
+footer {
+  margin-top: 18px;
+  color: var(--muted);
+  opacity: .78;
+  font-size: .82rem;
+}
+
+.app-tile.disabled {
+  cursor: default;
+  pointer-events: none;
+  opacity: .48;
+  filter: saturate(.72);
+}
+
+.app-tile.disabled .app-sub::after {
+  content: "";
+}
+
+.radio-main {
+  min-height: 52px;
+}
+
+.radio-menu {
+  margin-top: 10px;
+}
+
+/* =========================================================
+   UI MINIMAL V2 — moins de titres, plus d'usage
+   ========================================================= */
+
+/* Le header ne sert plus de panneau marketing.
+   On garde seulement les petits badges utiles : Accueil / LAN. */
+.hero {
+  justify-content: flex-end;
+  align-items: center;
+  min-height: 0;
+  margin-bottom: 14px;
+}
+
+/* Cache les blocs texte du header :
+   - RASPBERRY PI LOCAL
+   - Maison sonore
+   - Choisis une sous-application
+   - Réveil Pi
+   - Radio Pi
+*/
+.hero > div:first-child {
+  display: none;
+}
+
+/* Le badge Accueil / LAN devient l’unique élément du haut. */
+.hero .pill,
+.hero .home-link {
+  margin-left: auto;
+}
+
+/* Sur l’accueil, on rapproche les cartes du haut. */
+.app {
+  padding-top: 18px;
+}
+
+/* Les cartes deviennent la vraie navigation. */
+.app-grid,
+.home-grid {
+  margin-top: 0;
+}
+
+/* Signature plus discrète, pas un slogan. */
+.footer-signature,
+footer {
+  margin-top: 14px;
+  opacity: .58;
+  font-size: .78rem;
+}
+
+/* Les libellés internes restent utiles, mais plus calmes. */
+.dashboard-label {
+  opacity: .82;
+}
+
+.dashboard-sub,
+.app-sub,
+.small {
+  opacity: .78;
+}
+
+/* Moins d'effet vitrine sur les grosses cartes. */
+.dashboard {
+  margin-top: 0;
+}
+
+/* Les apps à venir doivent être presque silencieuses. */
+.app-tile.disabled {
+  opacity: .38;
+}
+
+/* =========================================================
+   UI MINIMAL HOME — cartes compactes
+   ========================================================= */
+
+.app-tile {
+  min-height: 78px;
+  padding: 16px 18px;
+}
+
+.app-title {
+  font-size: 1.08rem;
+  line-height: 1.1;
+}
+
+.app-sub:empty {
+  display: none;
+}
+
+.app-icon {
+  width: 48px;
+  height: 48px;
+  flex: 0 0 48px;
+}
+
+.app-tile.disabled .app-title {
+  opacity: .72;
+}
+
+/* =========================================================
+   UI MINIMAL ALARM — switch fade propre
+   ========================================================= */
+
+.fade-switch {
+  position: relative;
+  gap: 14px;
+  min-height: 62px;
+  padding: 12px 14px;
+  background: rgba(255,255,255,.045);
+  border: 1px solid rgba(255,255,255,.055);
+}
+
+.switch-copy {
+  display: grid;
+  gap: 3px;
+}
+
+.switch-copy strong {
+  font-size: .95rem;
+  font-weight: 750;
+  color: var(--text);
+}
+
+.switch-copy small {
+  font-size: .78rem;
+  color: var(--muted);
+  opacity: .72;
+}
+
+.fade-switch .switch-input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.switch-control {
+  position: relative;
+  width: 48px;
+  height: 28px;
+  flex: 0 0 48px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.12);
+  border: 1px solid rgba(255,255,255,.10);
+  box-shadow: inset 0 1px 3px rgba(0,0,0,.28);
+  transition: background .18s ease, border-color .18s ease, box-shadow .18s ease;
+}
+
+.switch-control::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: rgba(246,243,247,.88);
+  box-shadow: 0 2px 8px rgba(0,0,0,.35);
+  transition: transform .18s ease, background .18s ease;
+}
+
+.switch-input:checked + .switch-control {
+  background: linear-gradient(135deg, var(--main), var(--main2));
+  border-color: rgba(255,255,255,.18);
+  box-shadow: 0 0 0 3px rgba(138,95,130,.16);
+}
+
+.switch-input:checked + .switch-control::after {
+  transform: translateX(20px);
+  background: #fff;
+}
+
+.switch-input:focus-visible + .switch-control {
+  outline: 2px solid rgba(255,255,255,.35);
+  outline-offset: 3px;
+}
+
+.fade-status:empty {
+  display: none;
+}
+
+.fade-status {
+  margin-top: 10px;
+  font-size: .78rem;
+  opacity: .62;
+}
+
+.settings-panel h2:empty {
+  display: none;
+}
+
+/* =========================================================
+   UI RADIO — carte centrale interactive
+   ========================================================= */
+
+.radio-dashboard {
+  cursor: pointer;
+  transition:
+    transform .16s ease,
+    border-color .16s ease,
+    background .16s ease,
+    box-shadow .16s ease;
+}
+
+.radio-dashboard:hover {
+  border-color: rgba(255,255,255,.16);
+  transform: translateY(-1px);
+}
+
+.radio-dashboard:active {
+  transform: translateY(0);
+}
+
+.radio-dashboard:focus-visible {
+  outline: 2px solid rgba(255,255,255,.26);
+  outline-offset: 4px;
+}
+
+.radio-menu-in-card {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255,255,255,.08);
+}
+
+.radio-menu-in-card.hidden {
+  display: none;
+}
+
+.radio-menu-in-card .radio-choice {
+  width: 100%;
+  text-align: left;
+}
+
+.radio-menu-in-card .radio-choice + .radio-choice {
+  margin-top: 8px;
+}\n\n.action-status:empty {
+  display: none;
+}\n

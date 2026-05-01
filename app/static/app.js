@@ -268,12 +268,25 @@ function resetDashboard() {
   dashboardSub.textContent = dashboardSub.dataset.default || "";
 }
 
-const radioToggle = document.getElementById("radioToggle");
+const radioDashboard = document.getElementById("radioDashboard");
 const radioMenu = document.getElementById("radioMenu");
 
-if (radioToggle && radioMenu) {
-  radioToggle.addEventListener("click", () => {
-    radioMenu.classList.toggle("hidden");
+function toggleRadioMenu() {
+  if (!radioMenu) return;
+  radioMenu.classList.toggle("hidden");
+}
+
+if (radioDashboard && radioMenu) {
+  radioDashboard.addEventListener("click", (event) => {
+    if (event.target.closest(".radio-choice")) return;
+    if (event.target.closest(".js-stop-form")) return;
+    toggleRadioMenu();
+  });
+
+  radioDashboard.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    toggleRadioMenu();
   });
 }
 

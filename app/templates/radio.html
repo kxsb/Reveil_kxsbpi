@@ -14,16 +14,15 @@
       <div>
         <p class="eyebrow">Radio locale</p>
         <h1>📻 Radio Pi</h1>
-        <p id="heroNextAlarm" class="dashboard-sub">Lecteur radio</p>
       </div>
       <a class="pill home-link" href="/">Accueil</a>
     </header>
 
-    <section class="dashboard">
-      <p class="dashboard-label" id="dashboardLabel">Radio</p>
+    <section id="radioDashboard" class="dashboard radio-dashboard" role="button" tabindex="0" aria-label="Choisir une station">
+      <p class="dashboard-label" id="dashboardLabel">Lecture radio</p>
 
-      <div id="dashboardTime" class="dashboard-time" data-default="Aucune radio">
-        Aucune radio
+      <div id="dashboardTime" class="dashboard-time" data-default="Aucune station">
+        Aucune station
       </div>
 
       <p id="dashboardSub" class="dashboard-sub" data-default="Choisis une station">
@@ -41,26 +40,19 @@
         </svg>
         <p id="fadeGraphLabel"></p>
       </div>
+
+      <div id="radioMenu" class="radio-menu radio-menu-in-card hidden"></div>
     </section>
 
     <section class="actions">
-      <p id="actionStatus" class="small action-status">Prêt.</p>
-
-      <div class="radio-dropdown">
-        <button id="radioToggle" class="action radio-main" type="button">
-          📻 Choisir une radio
-        </button>
-
-        <div id="radioMenu" class="radio-menu hidden"></div>
-      </div>
-
-      <form action="/stop" method="post" class="js-stop-form hidden">
+      <p id="actionStatus" class="small action-status"></p>
+<form action="/stop" method="post" class="js-stop-form hidden">
         <button class="action danger" type="submit">⏹ Stop</button>
       </form>
     </section>
 
-    <footer>
-      <a href="/">← Retour accueil</a>
+    <footer class="footer-signature">
+      tu peux toujours rêver
     </footer>
 
   </main>

@@ -85,11 +85,14 @@
       </button>
 
       <div id="settingsPanel" class="settings-panel hidden">
-        <h2>🌅 Réveil progressif</h2>
 
-        <label class="switch-row">
-          <span>Fade in</span>
-          <input id="fadeEnabled" type="checkbox" {% if settings.ENABLE_FADE == "1" %}checked{% endif %}>
+        <label class="switch-row fade-switch">
+          <span class="switch-copy">
+            <strong>Fondu</strong>
+            <small>Montée progressive</small>
+          </span>
+          <input id="fadeEnabled" class="switch-input" type="checkbox" {% if settings.ENABLE_FADE == "1" %}checked{% endif %}>
+          <span class="switch-control" aria-hidden="true"></span>
         </label>
 
         <div id="fadeOptions">
@@ -139,10 +142,10 @@
           <button id="updatePlaylistButton" class="action secondary-action" type="button">
             🔄 Mettre à jour la playlist
           </button>
-          <p id="updatePlaylistStatus" class="small">Télécharge la playlist et recalcule le loudness.</p>
+          <p id="updatePlaylistStatus" class="small"></p>
         </div>
 
-        <p id="fadeStatus" class="small">Paramètres fade auto-sauvegardés</p>
+        <p id="fadeStatus" class="small"></p>
       </div>
     </section>
 
