@@ -18,5 +18,6 @@ git clone https://github.com/kxsb/Reveil_kxsbpi.git
 cd Reveil_kxsbpi
 ```
 ## Lancer l'app
-
+```
 python3 app.py
+```
