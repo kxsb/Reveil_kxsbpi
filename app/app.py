@@ -2,7 +2,6 @@ from flask import Flask, request, redirect, render_template, jsonify
 import subprocess
 from datetime import datetime
 import json
-import time
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 
@@ -34,36 +33,13 @@ from services.radio_service import (
     get_radio_station,
     sanitize_station_id,
 )
+from services.player_service import (
+    log,
+    run_process,
+    stop_mpv,
+    read_player_state,
+)
 
-
-def log(msg):
-    line = f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {msg}\n"
-    LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
-    with LOG_FILE.open("a", encoding="utf-8") as f:
-        f.write(line)
-
-def run_process(args):
-    log(f"Commande lancée : {' '.join(str(a) for a in args)}")
-
-    with LOG_FILE.open("a", encoding="utf-8") as log_handle:
-        process = subprocess.Popen(
-            [str(a) for a in args],
-            cwd=str(BASE_DIR),
-            stdout=log_handle,
-            stderr=log_handle,
-            start_new_session=True,
-        )
-
-    log(f"PID lancé : {process.pid}")
-
-def is_mpv_running():
-    result = subprocess.run(
-        ["/usr/bin/pgrep", "-x", "mpv"],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        check=False,
-    )
-    return result.returncode == 0
 
 @app.route("/")
 def index():
@@ -140,21 +116,12 @@ def play_fip():
 @app.route("/stop", methods=["POST"])
 def stop():
     try:
-        subprocess.run(
-            ["/usr/bin/pkill", "-x", "mpv"],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            check=False,
-        )
-
-        STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
-        STATE_FILE.write_text('{"status":"stopped"}', encoding="utf-8")
-
-        log("Lecture arrêtée via bouton stop")
+        stop_mpv()
     except Exception as e:
         log(f"Erreur stop : {e}")
 
-    return jsonify({"ok": True, "message": "🛑 Lecture arrêtée"})
+    return jsonify({"ok": True, "message": "⏹ Lecture arrêtée"})
+
 
 @app.route("/update_playlist", methods=["POST"])
 def update_playlist():
@@ -206,25 +173,8 @@ def alarm_status():
 
 @app.route("/status")
 def status():
-    if not STATE_FILE.exists():
-        return jsonify({
-            "status": "idle",
-            "now": int(time.time())
-        })
+    return jsonify(read_player_state())
 
-    try:
-        data = json.loads(STATE_FILE.read_text(encoding="utf-8"))
-    except Exception:
-        data = {"status": "unknown"}
-
-    if data.get("status") in ["playing", "fading"] and not is_mpv_running():
-        data = {"status": "stopped"}
-        STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
-        STATE_FILE.write_text(json.dumps(data), encoding="utf-8")
-        log("État player corrigé : mpv absent, passage à stopped")
-
-    data["now"] = int(time.time())
-    return jsonify(data)
 
 @app.route("/radio_now/<station_id>")
 def radio_now(station_id):
