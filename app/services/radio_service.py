@@ -54,3 +54,42 @@ def get_radio_label(station_id):
         return safe_station_id or "Radio"
 
     return station.get("label", safe_station_id)
+
+
+def fetch_radio_now(station_id, timeout=5):
+    """
+    Récupère les métadonnées live d'une radio via scripts/radio_meta.py.
+
+    Retourne toujours un dictionnaire JSON-compatible.
+    """
+    import json
+    import subprocess
+
+    from services.paths import SCRIPTS_DIR
+
+    safe_station_id = sanitize_station_id(station_id)
+
+    if not safe_station_id:
+        return {
+            "ok": False,
+            "error": "Station invalide",
+        }
+
+    try:
+        proc = subprocess.run(
+            ["python3", str(SCRIPTS_DIR / "radio_meta.py"), safe_station_id],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+
+        if proc.returncode != 0:
+            raise RuntimeError(proc.stderr.strip() or "radio_meta.py failed")
+
+        return json.loads(proc.stdout)
+
+    except Exception as e:
+        return {
+            "ok": False,
+            "error": str(e),
+        }

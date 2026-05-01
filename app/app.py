@@ -1,7 +1,5 @@
 from flask import Flask, request, redirect, render_template, jsonify
-import subprocess
 from datetime import datetime
-import json
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 
@@ -32,6 +30,7 @@ from services.radio_service import (
     read_radio_stations,
     get_radio_station,
     sanitize_station_id,
+    fetch_radio_now,
 )
 from services.player_service import (
     log,
@@ -178,31 +177,13 @@ def status():
 
 @app.route("/radio_now/<station_id>")
 def radio_now(station_id):
-    safe_station_id = sanitize_station_id(station_id)
+    data = fetch_radio_now(station_id)
 
-    if not safe_station_id:
-        return jsonify({"ok": False, "error": "Station invalide"})
+    if not data.get("ok"):
+        log(f"Erreur radio_now : {data.get('error')}")
 
-    try:
-        proc = subprocess.run(
-            ["python3", str(SCRIPTS_DIR / "radio_meta.py"), safe_station_id],
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
+    return jsonify(data)
 
-        if proc.returncode != 0:
-            raise Exception(proc.stderr)
-
-        data = json.loads(proc.stdout)
-        return jsonify(data)
-
-    except Exception as e:
-        log(f"Erreur radio_now : {e}")
-        return jsonify({
-            "ok": False,
-            "error": str(e),
-        })
 
 @app.route("/radio_stations")
 def radio_stations():
