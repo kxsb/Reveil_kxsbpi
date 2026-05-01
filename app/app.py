@@ -9,7 +9,6 @@ from services.paths import (
     WEB_LOG_FILE as LOG_FILE,
     SCRIPTS_DIR,
     PLAY_SCRIPT,
-    TEST_SCRIPT,
     UPDATE_SCRIPT,
     STATE_FILE,
     RADIO_STATIONS_FILE,

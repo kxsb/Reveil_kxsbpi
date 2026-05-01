@@ -1,7 +1,7 @@
 import json
 import re
 
-from services.paths import RADIO_STATIONS_FILE
+from services.paths import RADIO_STATIONS_FILE, RADIO_META_SCRIPT
 
 
 def sanitize_station_id(station_id):
@@ -65,7 +65,7 @@ def fetch_radio_now(station_id, timeout=5):
     import json
     import subprocess
 
-    from services.paths import SCRIPTS_DIR
+    
 
     safe_station_id = sanitize_station_id(station_id)
 
@@ -77,7 +77,7 @@ def fetch_radio_now(station_id, timeout=5):
 
     try:
         proc = subprocess.run(
-            ["python3", str(SCRIPTS_DIR / "radio_meta.py"), safe_station_id],
+            ["python3", str(RADIO_META_SCRIPT), safe_station_id],
             capture_output=True,
             text=True,
             timeout=timeout,

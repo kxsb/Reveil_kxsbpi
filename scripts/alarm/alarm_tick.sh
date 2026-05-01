@@ -6,7 +6,7 @@ export HOME="/home/kxsbpi"
 BASE="$HOME/reveil"
 
 CONFIG_FILE="$BASE/config/reveil.conf"
-PLAY_SCRIPT="$BASE/scripts/play_reveil.sh"
+PLAY_SCRIPT="$BASE/scripts/player/play_reveil.sh"
 LOG_FILE="$BASE/logs/alarm.log"
 LOCK_FILE="/tmp/reveil_alarm.lock"
 
