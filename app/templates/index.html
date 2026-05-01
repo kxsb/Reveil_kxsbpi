@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Réveil Pi</title>
+  <title>Maison sonore</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 
@@ -22,40 +22,46 @@
     <section class="home-grid">
 
       <a id="homeTileAlarm" class="app-tile" href="/alarm" data-home-app="alarm">
-        <span class="app-icon">⏰</span>
+        <span class="app-icon">
+          <span class="app-icon-symbol">⏰</span>
+          <span class="icon-waveform mini-waveform hidden" aria-hidden="true"></span>
+        </span>
         <span class="app-title">Réveil</span>
         <span class="app-sub">Heure, source, fade-in</span>
-              <span class="mini-waveform hidden" aria-hidden="true">
-          <i></i><i></i><i></i><i></i><i></i>
-        </span>
       </a>
 
       <a id="homeTileRadio" class="app-tile" href="/radio" data-home-app="radio">
-        <span class="app-icon">📻</span>
+        <span class="app-icon">
+          <span class="app-icon-symbol">📻</span>
+          <span class="icon-waveform mini-waveform hidden" aria-hidden="true"></span>
+        </span>
         <span class="app-title">Radio</span>
         <span class="app-sub">Stations, direct, métadonnées</span>
-              <span class="mini-waveform hidden" aria-hidden="true">
-          <i></i><i></i><i></i><i></i><i></i>
-        </span>
       </a>
 
-      <a class="app-tile disabled" href="#">
-        <span class="app-icon">💡</span>
+      <a id="homeTileLights" class="app-tile disabled" href="#" data-home-app="lights">
+        <span class="app-icon">
+          <span class="app-icon-symbol">💡</span>
+          <span class="icon-waveform mini-waveform hidden" aria-hidden="true"></span>
+        </span>
         <span class="app-title">Lumière</span>
         <span class="app-sub">À venir</span>
-              <span class="mini-waveform hidden" aria-hidden="true">
-          <i></i><i></i><i></i><i></i><i></i>
-        </span>
       </a>
 
       <a id="homeTilePlayer" class="app-tile disabled" href="#" data-home-app="player">
-        <span class="app-icon">🎧</span>
+        <span class="app-icon">
+          <span class="app-icon-symbol">🎧</span>
+          <span class="icon-waveform mini-waveform hidden" aria-hidden="true"></span>
+        </span>
         <span class="app-title">Lecteur</span>
         <span class="app-sub">YouTube audio HQ à venir</span>
       </a>
 
-      <a class="app-tile disabled" href="#">
-        <span class="app-icon">⚙️</span>
+      <a id="homeTileConfig" class="app-tile disabled" href="#" data-home-app="config">
+        <span class="app-icon">
+          <span class="app-icon-symbol">⚙️</span>
+          <span class="icon-waveform mini-waveform hidden" aria-hidden="true"></span>
+        </span>
         <span class="app-title">Config Pi</span>
         <span class="app-sub">Sortie audio, volume, système</span>
       </a>
@@ -67,5 +73,7 @@
     </footer>
 
   </main>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
 </body>
 </html>

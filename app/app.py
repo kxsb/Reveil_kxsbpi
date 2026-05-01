@@ -36,6 +36,7 @@ from services.player_service import (
     run_process,
     stop_mpv,
     read_player_state,
+    read_waveform_state,
 )
 
 
@@ -88,8 +89,11 @@ def set_alarm():
 
 @app.route("/test", methods=["POST"])
 def test_sound():
-    run_process(["/bin/bash", TEST_SCRIPT])
+    # Test sonore = lecture manuelle via le moteur principal,
+    # afin de bénéficier du state, du stop et de la waveform.
+    run_process(["/bin/bash", PLAY_SCRIPT, "random", "fip", "test"])
     return jsonify({"ok": True, "message": "🎧 Test sonore lancé"})
+
 
 @app.route("/play_playlist", methods=["POST"])
 def play_playlist():
@@ -190,6 +194,11 @@ def radio_now(station_id):
 
     return jsonify(data)
 
+
+
+@app.route("/waveform")
+def waveform():
+    return jsonify(read_waveform_state())
 
 @app.route("/radio_stations")
 def radio_stations():

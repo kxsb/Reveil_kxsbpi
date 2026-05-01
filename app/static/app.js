@@ -618,3 +618,390 @@ function showActionStatus(message, duration = 2500) {
     }, duration);
   }
 }
+
+// ===============================
+// Waveform réelle via /waveform
+// ===============================
+
+function ensureWaveformBars(container, count = 18) {
+  if (!container) return;
+
+  const current = container.querySelectorAll("i").length;
+
+  if (current === count) return;
+
+  container.innerHTML = "";
+
+  for (let i = 0; i < count; i++) {
+    const bar = document.createElement("i");
+    container.appendChild(bar);
+  }
+}
+
+function renderWaveformBars(container, bars, maxHeight = 42) {
+  if (!container || !Array.isArray(bars) || bars.length === 0) return;
+
+  ensureWaveformBars(container, bars.length);
+  container.classList.add("is-live-levels");
+
+  const nodes = container.querySelectorAll("i");
+
+  bars.forEach((value, index) => {
+    const bar = nodes[index];
+    if (!bar) return;
+
+    const level = Math.max(0.04, Math.min(1, Number(value) || 0));
+    const height = Math.max(4, Math.round(level * maxHeight));
+
+    bar.style.height = `${height}px`;
+    bar.style.opacity = `${0.35 + level * 0.65}`;
+  });
+}
+
+function renderAllWaveforms(data) {
+  if (!data || !data.active || !Array.isArray(data.bars) || data.bars.length === 0) {
+    return;
+  }
+
+  const live = document.getElementById("liveWaveform");
+  renderWaveformBars(live, data.bars, 42);
+
+  document.querySelectorAll(".app-tile.is-playing .mini-waveform").forEach((wave) => {
+    renderWaveformBars(wave, data.bars.slice(-8), 24);
+  });
+}
+
+async function refreshRealWaveform() {
+  try {
+    const res = await fetch("/waveform");
+    const data = await res.json();
+    renderAllWaveforms(data);
+  } catch (e) {
+    console.error("waveform error", e);
+  }
+}
+
+// Ancien rendu waveform remplacé par le moteur fluide.
+// setInterval(refreshRealWaveform, 250);
+// refreshRealWaveform();
+
+// ===============================
+// Waveform fluide : interpolation navigateur
+// ===============================
+
+const waveformState = {
+  targetBars: [],
+  currentBars: [],
+  lastActive: false,
+};
+
+function smoothStep(current, target, factor = 0.22) {
+  return current + (target - current) * factor;
+}
+
+function normalizeBars(bars, count = 18) {
+  if (!Array.isArray(bars) || bars.length === 0) {
+    return Array(count).fill(0);
+  }
+
+  const out = bars.slice(-count);
+
+  while (out.length < count) {
+    out.unshift(0);
+  }
+
+  return out;
+}
+
+function updateWaveformTargets(data) {
+  if (!data || !data.active || !Array.isArray(data.bars)) {
+    waveformState.lastActive = false;
+    waveformState.targetBars = waveformState.targetBars.map(() => 0);
+    return;
+  }
+
+  waveformState.lastActive = true;
+  waveformState.targetBars = normalizeBars(data.bars, 18);
+
+  if (waveformState.currentBars.length !== waveformState.targetBars.length) {
+    waveformState.currentBars = waveformState.targetBars.map(() => 0);
+  }
+}
+
+function renderSmoothWaveformContainer(container, bars, maxHeight = 42) {
+  if (!container) return;
+
+  ensureWaveformBars(container, bars.length);
+  container.classList.add("is-live-levels");
+
+  const nodes = container.querySelectorAll("i");
+
+  bars.forEach((value, index) => {
+    const bar = nodes[index];
+    if (!bar) return;
+
+    const level = Math.max(0.035, Math.min(1, Number(value) || 0));
+    const height = Math.max(3, Math.round(level * maxHeight));
+
+    bar.style.height = `${height}px`;
+    bar.style.opacity = `${0.28 + level * 0.72}`;
+  });
+}
+
+function animateWaveforms() {
+  if (waveformState.targetBars.length > 0) {
+    if (waveformState.currentBars.length !== waveformState.targetBars.length) {
+      waveformState.currentBars = waveformState.targetBars.map(() => 0);
+    }
+
+    waveformState.currentBars = waveformState.currentBars.map((current, index) => {
+      const target = waveformState.targetBars[index] || 0;
+      return smoothStep(current, target, 0.26);
+    });
+
+    const live = document.getElementById("liveWaveform");
+    renderSmoothWaveformContainer(live, waveformState.currentBars, 42);
+
+    document.querySelectorAll(".app-tile.is-playing .mini-waveform").forEach((wave) => {
+      renderSmoothWaveformContainer(wave, waveformState.currentBars.slice(-8), 24);
+    });
+  }
+
+  requestAnimationFrame(animateWaveforms);
+}
+
+async function pollRealWaveformSmooth() {
+  try {
+    const res = await fetch("/waveform", { cache: "no-store" });
+    const data = await res.json();
+    updateWaveformTargets(data);
+  } catch (e) {
+    console.error("waveform smooth error", e);
+  }
+}
+
+// Ancien moteur barres lissées désactivé.
+// setInterval(pollRealWaveformSmooth, 150);
+// pollRealWaveformSmooth();
+// requestAnimationFrame(animateWaveforms);
+
+// ===============================
+// Premium waveform canvas
+// Onde fluide générée côté navigateur,
+// modulée par le vrai niveau audio.
+// ===============================
+
+const premiumWaveform = {
+  targetLevel: 0,
+  currentLevel: 0,
+  active: false,
+  phase: 0,
+  lastPoll: 0,
+};
+
+function ensureWaveCanvas(container) {
+  if (!container) return null;
+
+  container.classList.add("is-canvas-wave");
+
+  let canvas = container.querySelector("canvas.wave-canvas");
+
+  if (!canvas) {
+    canvas = document.createElement("canvas");
+    canvas.className = "wave-canvas";
+    container.innerHTML = "";
+    container.appendChild(canvas);
+  }
+
+  const rect = container.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  const width = Math.max(1, Math.floor(rect.width * dpr));
+  const height = Math.max(1, Math.floor(rect.height * dpr));
+
+  if (canvas.width !== width || canvas.height !== height) {
+    canvas.width = width;
+    canvas.height = height;
+  }
+
+  return canvas;
+}
+
+function drawPremiumWave(container, options = {}) {
+  const canvas = ensureWaveCanvas(container);
+  if (!canvas) return;
+
+  const ctx = canvas.getContext("2d");
+  const w = canvas.width;
+  const h = canvas.height;
+  const dpr = window.devicePixelRatio || 1;
+
+  ctx.clearRect(0, 0, w, h);
+
+  const level = premiumWaveform.currentLevel;
+  const active = premiumWaveform.active;
+
+  if (!active && level < 0.015) {
+    return;
+  }
+
+  const baseAmp = options.baseAmp || 0.10;
+  const ampBoost = options.ampBoost || 0.34;
+  const lineWidth = (options.lineWidth || 2.2) * dpr;
+
+  const mid = h * 0.5;
+  const amp = h * (baseAmp + level * ampBoost);
+  const points = options.points || 96;
+
+  const phase = premiumWaveform.phase;
+  const speed1 = phase * 1.0;
+  const speed2 = phase * 0.63;
+  const speed3 = phase * 1.37;
+
+  ctx.beginPath();
+
+  for (let i = 0; i <= points; i++) {
+    const x = (i / points) * w;
+    const t = i / points;
+
+    // Fenêtre douce : l'onde respire au centre et s'apaise aux bords.
+    const envelope = Math.sin(Math.PI * t);
+
+    // Mélange de sinusoïdes pour éviter l'effet métronome cheap.
+    const y1 = Math.sin(t * Math.PI * 2.0 + speed1);
+    const y2 = Math.sin(t * Math.PI * 5.0 - speed2) * 0.38;
+    const y3 = Math.sin(t * Math.PI * 9.0 + speed3) * 0.16;
+
+    const y = mid + (y1 + y2 + y3) * amp * envelope;
+
+    if (i === 0) {
+      ctx.moveTo(x, y);
+    } else {
+      ctx.lineTo(x, y);
+    }
+  }
+
+  ctx.lineWidth = lineWidth;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.strokeStyle = "rgba(246, 243, 247, 0.90)";
+  ctx.stroke();
+
+  // Deuxième onde fantôme, plus douce, pour donner de la profondeur.
+  ctx.beginPath();
+
+  for (let i = 0; i <= points; i++) {
+    const x = (i / points) * w;
+    const t = i / points;
+    const envelope = Math.sin(Math.PI * t);
+
+    const y =
+      mid +
+      Math.sin(t * Math.PI * 3.0 - phase * 0.72) *
+        amp *
+        0.42 *
+        envelope;
+
+    if (i === 0) {
+      ctx.moveTo(x, y);
+    } else {
+      ctx.lineTo(x, y);
+    }
+  }
+
+  ctx.lineWidth = Math.max(1, lineWidth * 0.65);
+  ctx.strokeStyle = "rgba(246, 243, 247, 0.28)";
+  ctx.stroke();
+}
+
+function animatePremiumWaveforms() {
+  // Mouvement continu, indépendant du polling réseau.
+  premiumWaveform.phase += 0.045 + premiumWaveform.currentLevel * 0.035;
+
+  // Lissage de l'énergie réelle.
+  premiumWaveform.currentLevel +=
+    (premiumWaveform.targetLevel - premiumWaveform.currentLevel) * 0.075;
+
+  const live = document.getElementById("liveWaveform");
+
+  if (live && !live.classList.contains("hidden")) {
+    drawPremiumWave(live, {
+      baseAmp: 0.08,
+      ampBoost: 0.36,
+      lineWidth: 2.4,
+      points: 120,
+    });
+  }
+
+  document.querySelectorAll(".app-tile.is-playing .mini-waveform").forEach((wave) => {
+    drawPremiumWave(wave, {
+      baseAmp: 0.12,
+      ampBoost: 0.32,
+      lineWidth: 1.8,
+      points: 72,
+    });
+  });
+
+  requestAnimationFrame(animatePremiumWaveforms);
+}
+
+async function pollPremiumWaveformLevel() {
+  try {
+    const res = await fetch("/waveform", { cache: "no-store" });
+    const data = await res.json();
+
+    premiumWaveform.active = Boolean(data && data.active);
+
+    if (data && data.active) {
+      let level = Number(data.level || 0);
+
+      // Compression musicale : évite que l'onde soit plate ou hystérique.
+      level = Math.sqrt(Math.max(0, Math.min(1, level)));
+      premiumWaveform.targetLevel = Math.max(0.08, Math.min(1, level));
+    } else {
+      premiumWaveform.targetLevel = 0;
+    }
+  } catch (e) {
+    premiumWaveform.active = false;
+    premiumWaveform.targetLevel = 0;
+  }
+}
+
+setInterval(pollPremiumWaveformLevel, 250);
+pollPremiumWaveformLevel();
+requestAnimationFrame(animatePremiumWaveforms);
+
+// ===============================
+// Home icons : waveform inside app icons
+// ===============================
+
+function showHomeIconWave(tile) {
+  if (!tile) return;
+
+  const wave = tile.querySelector(".mini-waveform");
+  if (wave) {
+    wave.classList.remove("hidden");
+  }
+}
+
+function hideHomeIconWaves() {
+  document.querySelectorAll("[data-home-app] .mini-waveform").forEach((wave) => {
+    wave.classList.add("hidden");
+  });
+}
+
+// Surcharge douce : garde la logique existante mais rend visible la waveform d'icône.
+const originalMarkHomePlayingTile =
+  typeof markHomePlayingTile === "function" ? markHomePlayingTile : null;
+
+if (originalMarkHomePlayingTile) {
+  markHomePlayingTile = function(data) {
+    originalMarkHomePlayingTile(data);
+
+    hideHomeIconWaves();
+
+    const activeTile = document.querySelector(".app-tile.is-playing");
+    if (activeTile) {
+      showHomeIconWave(activeTile);
+    }
+  };
+}

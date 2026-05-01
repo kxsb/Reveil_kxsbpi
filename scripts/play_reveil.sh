@@ -20,6 +20,9 @@ SETTINGS_FILE="$BASE/config/reveil_settings.conf"
 LOG_FILE="$BASE/logs/player.log"
 STATE_DIR="$BASE/state"
 STATE_FILE="$STATE_DIR/player_state.json"
+WAVEFORM_FILE="$STATE_DIR/audio_waveform.json"
+WAVEFORM_PID_FILE="$STATE_DIR/audio_waveform.pid"
+WAVEFORM_MANAGER_PID_FILE="$STATE_DIR/audio_waveform_manager.pid"
 
 mkdir -p "$BASE/logs" "$STATE_DIR"
 
@@ -72,11 +75,12 @@ log() {
   echo "$(date '+%F %T') $*" >> "$LOG_FILE"
 }
 
-# Le fade-in appartient au réveil, pas au player radio manuel.
-# Si la radio est lancée depuis l'interface Radio, elle démarre directement.
-if [ "$PLAYER_CONTEXT" = "manual" ] && [ "$MODE" = "radio" ]; then
+# Le fade-in appartient au réveil.
+# Les lectures manuelles radio/lecteur démarrent directement.
+# Le contexte "test" respecte les réglages du réveil.
+if [ "$PLAYER_CONTEXT" = "manual" ]; then
   ENABLE_FADE="0"
-  log "Radio manuelle : fade-in désactivé"
+  log "Lecture manuelle : fade-in désactivé"
 fi
 
 get_radio_value() {
@@ -172,6 +176,63 @@ write_state_stopped() {
   "status": "stopped"
 }
 EOF
+}
+
+stop_waveform_monitor() {
+  if [ -f "$WAVEFORM_MANAGER_PID_FILE" ]; then
+    local manager_pid
+    manager_pid="$(cat "$WAVEFORM_MANAGER_PID_FILE" 2>/dev/null || true)"
+
+    if [ -n "$manager_pid" ]; then
+      kill "$manager_pid" 2>/dev/null || true
+    fi
+
+    rm -f "$WAVEFORM_MANAGER_PID_FILE"
+  fi
+
+  if [ -f "$WAVEFORM_PID_FILE" ]; then
+    local pid
+    pid="$(cat "$WAVEFORM_PID_FILE" 2>/dev/null || true)"
+
+    if [ -n "$pid" ]; then
+      kill "$pid" 2>/dev/null || true
+    fi
+
+    rm -f "$WAVEFORM_PID_FILE"
+  fi
+
+  cat > "$WAVEFORM_FILE" <<EOF_WAVEFORM_STOP
+{
+  "ok": false,
+  "active": false,
+  "level": 0,
+  "bars": []
+}
+EOF_WAVEFORM_STOP
+}
+
+start_waveform_watcher() {
+  stop_waveform_monitor
+
+  python3 "$BASE/scripts/audio_waveform_source_watcher.py" "$SOCKET" "$WAVEFORM_FILE" "$WAVEFORM_PID_FILE" >> "$LOG_FILE" 2>&1 &
+  echo "$!" > "$WAVEFORM_MANAGER_PID_FILE"
+
+  log "Waveform source watcher lancé PID=$(cat "$WAVEFORM_MANAGER_PID_FILE")"
+}
+
+start_waveform_monitor() {
+  local source="$1"
+
+  if [ -z "$source" ]; then
+    return
+  fi
+
+  stop_waveform_monitor
+
+  python3 "$BASE/scripts/audio_waveform_monitor.py" "$source" "$WAVEFORM_FILE" >> "$LOG_FILE" 2>&1 &
+  echo "$!" > "$WAVEFORM_PID_FILE"
+
+  log "Waveform monitor lancé PID=$(cat "$WAVEFORM_PID_FILE") source=$source"
 }
 
 is_number() {
@@ -362,6 +423,8 @@ done
 # ----------------------------------------------------------------------------
 # Lancement mpv
 # ----------------------------------------------------------------------------
+stop_waveform_monitor
+
 "${MPV_CMD[@]}" >> "$LOG_FILE" 2>&1 &
 MPV_PID=$!
 log "mpv lancé PID=$MPV_PID"
@@ -407,6 +470,8 @@ if [ ! -S "$SOCKET" ]; then
 fi
 
 log "Socket mpv OK : $SOCKET"
+
+start_waveform_watcher
 
 # ----------------------------------------------------------------------------
 # Fade-in configurable

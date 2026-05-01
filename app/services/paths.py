@@ -28,3 +28,9 @@ def ensure_runtime_dirs():
     """
     for directory in (CONFIG_DIR, LOG_DIR, STATE_DIR, DATA_DIR):
         directory.mkdir(parents=True, exist_ok=True)
+
+
+WAVEFORM_FILE = STATE_DIR / "audio_waveform.json"
+WAVEFORM_PID_FILE = STATE_DIR / "audio_waveform.pid"
+
+WAVEFORM_MANAGER_PID_FILE = STATE_DIR / "audio_waveform_manager.pid"

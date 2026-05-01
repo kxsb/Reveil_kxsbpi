@@ -3,7 +3,7 @@ import subprocess
 import time
 from datetime import datetime
 
-from services.paths import BASE_DIR, WEB_LOG_FILE, STATE_FILE
+from services.paths import BASE_DIR, WEB_LOG_FILE, STATE_FILE, WAVEFORM_FILE, WAVEFORM_PID_FILE, WAVEFORM_MANAGER_PID_FILE
 
 
 def log(msg):
@@ -43,6 +43,37 @@ def is_mpv_running():
     return result.returncode == 0
 
 
+
+def stop_waveform_monitor():
+    for pid_file in (WAVEFORM_MANAGER_PID_FILE, WAVEFORM_PID_FILE):
+        if pid_file.exists():
+            try:
+                pid = int(pid_file.read_text(encoding="utf-8").strip())
+                subprocess.run(
+                    ["/bin/kill", str(pid)],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    check=False,
+                )
+            except Exception as e:
+                log(f"Erreur arrêt waveform process : {e}")
+
+            try:
+                pid_file.unlink()
+            except FileNotFoundError:
+                pass
+
+    WAVEFORM_FILE.parent.mkdir(parents=True, exist_ok=True)
+    WAVEFORM_FILE.write_text(
+        json.dumps({
+            "ok": False,
+            "active": False,
+            "level": 0,
+            "bars": [],
+        }),
+        encoding="utf-8",
+    )
+
 def stop_mpv():
     """
     Stoppe tous les processus mpv.
@@ -56,6 +87,7 @@ def stop_mpv():
         check=False,
     )
 
+    stop_waveform_monitor()
     write_player_state({"status": "stopped"})
     log("Lecture arrêtée via bouton stop")
 
@@ -84,3 +116,29 @@ def read_player_state():
 def write_player_state(data):
     STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
     STATE_FILE.write_text(json.dumps(data), encoding="utf-8")
+
+
+def read_waveform_state():
+    if not WAVEFORM_FILE.exists():
+        return {
+            "ok": False,
+            "active": False,
+            "level": 0,
+            "bars": [],
+        }
+
+    try:
+        data = json.loads(WAVEFORM_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return {
+            "ok": False,
+            "active": False,
+            "level": 0,
+            "bars": [],
+        }
+
+    # Si le fichier est vieux, on considère la waveform inactive.
+    if time.time() - float(data.get("ts", 0)) > 3:
+        data["active"] = False
+
+    return data

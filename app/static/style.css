@@ -659,3 +659,95 @@ footer {
 .alarm-dashboard.is-editing .alarm-summary-line {
   opacity: .72;
 }
+
+/* Waveform pilotée par vrais niveaux audio */
+.is-live-levels i {
+  animation: none !important;
+  transition: height .08s linear, opacity .08s linear;
+}
+
+/* Waveform fluide : les hauteurs sont pilotées en JS à 60 FPS */
+.is-live-levels i {
+  animation: none !important;
+  transition: height .045s linear, opacity .08s linear;
+  will-change: height, opacity;
+}
+
+/* =========================================================
+   PREMIUM AUDIO WAVEFORM
+   ========================================================= */
+
+.live-waveform,
+.mini-waveform {
+  position: relative;
+  overflow: hidden;
+}
+
+.live-waveform {
+  height: 58px;
+  margin-top: 16px;
+}
+
+.mini-waveform {
+  height: 28px;
+  margin-top: 12px;
+}
+
+.live-waveform canvas,
+.mini-waveform canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  opacity: .95;
+}
+
+/* On neutralise les anciennes barres <i> si elles existent encore */
+.live-waveform.is-canvas-wave i,
+.mini-waveform.is-canvas-wave i {
+  display: none !important;
+}
+
+/* =========================================================
+   HOME ICON WAVEFORM
+   ========================================================= */
+
+.app-icon {
+  position: relative;
+  overflow: hidden;
+}
+
+.app-icon-symbol {
+  position: relative;
+  z-index: 2;
+  transition: opacity .18s ease, transform .18s ease;
+}
+
+.icon-waveform {
+  position: absolute;
+  inset: 8px;
+  z-index: 1;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .18s ease;
+}
+
+.app-tile.is-playing .icon-waveform {
+  opacity: .95;
+}
+
+.app-tile.is-playing .app-icon-symbol {
+  opacity: .28;
+  transform: scale(.92);
+}
+
+.icon-waveform canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.app-tile.is-playing .app-icon {
+  background:
+    radial-gradient(circle at center, rgba(97,211,148,.18), rgba(255,255,255,.06));
+  box-shadow: 0 0 22px rgba(97,211,148,.16);
+}
