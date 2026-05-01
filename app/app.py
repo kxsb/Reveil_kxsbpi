@@ -1,5 +1,6 @@
 from flask import Flask, request, redirect, render_template, jsonify
 from urllib.parse import urlparse
+from pathlib import Path
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 
@@ -11,7 +12,9 @@ from services.paths import (
     SCRIPTS_DIR,
     PLAY_SCRIPT,
     PLAY_URL_SCRIPT,
+    PLAY_FILE_SCRIPT,
     UPDATE_SCRIPT,
+    MUSIC_DIR,
     STATE_FILE,
     RADIO_STATIONS_FILE,
     ensure_runtime_dirs,
@@ -116,6 +119,108 @@ def play_radio(station_id):
 
     return jsonify({"ok": True, "message": message})
 
+
+
+
+AUDIO_EXTENSIONS = {".mp3", ".m4a", ".aac", ".opus", ".ogg", ".oga", ".wav", ".flac", ".webm"}
+
+
+def safe_music_file(rel_path):
+    """
+    Valide un chemin relatif dans MUSIC_DIR.
+
+    Refuse :
+    - chemins absolus ;
+    - traversal ../ ;
+    - extensions non audio ;
+    - fichiers inexistants.
+    """
+    rel_path = (rel_path or "").strip()
+
+    if not rel_path:
+        return None, "Fichier manquant"
+
+    rel = Path(rel_path)
+
+    if rel.is_absolute() or ".." in rel.parts:
+        return None, "Chemin invalide"
+
+    candidate = (MUSIC_DIR / rel).resolve()
+    root = MUSIC_DIR.resolve()
+
+    try:
+        candidate.relative_to(root)
+    except ValueError:
+        return None, "Chemin hors dossier musique"
+
+    if candidate.suffix.lower() not in AUDIO_EXTENSIONS:
+        return None, "Format audio non autorisé"
+
+    if not candidate.is_file:
+        return None, "Fichier introuvable"
+
+    return candidate, ""
+
+
+@app.route("/music_files")
+def music_files():
+    if not MUSIC_DIR.exists():
+        return jsonify({
+            "ok": True,
+            "files": [],
+            "message": "Dossier musique absent",
+        })
+
+    files = []
+
+    for path in sorted(MUSIC_DIR.rglob("*")):
+        if not path.is_file():
+            continue
+
+        if path.suffix.lower() not in AUDIO_EXTENSIONS:
+            continue
+
+        rel = path.relative_to(MUSIC_DIR).as_posix()
+        label = path.stem
+
+        # Nettoyage léger des préfixes playlist type "01 - "
+        if len(label) > 5 and label[:2].isdigit() and label[2:5] == " - ":
+            label = label[5:]
+
+        files.append({
+            "path": rel,
+            "label": label,
+            "filename": path.name,
+        })
+
+    return jsonify({
+        "ok": True,
+        "files": files,
+    })
+
+
+@app.route("/play_file", methods=["POST"])
+def play_file():
+    rel_path = request.form.get("path", "").strip()
+    file_path, error = safe_music_file(rel_path)
+
+    if error:
+        return jsonify({
+            "ok": False,
+            "message": error,
+        })
+
+    try:
+        stop_mpv()
+    except Exception as e:
+        log(f"Erreur stop avant lecture fichier : {e}")
+
+    run_process(["/bin/bash", PLAY_FILE_SCRIPT, rel_path])
+
+    return jsonify({
+        "ok": True,
+        "message": "🎧 Lecture locale lancée",
+    })
 
 
 @app.route("/play_url", methods=["POST"])

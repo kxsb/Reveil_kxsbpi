@@ -1122,3 +1122,85 @@ footer {
     align-items: center;
   }
 }
+
+/* =========================================================
+   UI PLAYER — dossier musique local
+   ========================================================= */
+
+.music-library {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255,255,255,.07);
+}
+
+.music-library-toggle {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 16px;
+  background: rgba(255,255,255,.055);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 14px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.music-library-toggle small {
+  color: var(--muted);
+  opacity: .7;
+  font-size: .76rem;
+}
+
+.music-library-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  max-height: 320px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.music-library-list.hidden {
+  display: none;
+}
+
+.music-file-choice {
+  width: 100%;
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 14px;
+  background: rgba(255,255,255,.045);
+  color: var(--text);
+  padding: 11px 12px;
+  text-align: left;
+  display: grid;
+  gap: 3px;
+  cursor: pointer;
+}
+
+.music-file-choice span {
+  font-size: .92rem;
+  font-weight: 650;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.music-file-choice small,
+.music-empty {
+  color: var(--muted);
+  opacity: .68;
+  font-size: .76rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.music-file-choice:hover,
+.music-library-toggle:hover {
+  border-color: rgba(255,255,255,.15);
+  background: rgba(255,255,255,.075);
+}

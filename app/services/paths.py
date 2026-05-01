@@ -7,6 +7,7 @@ CONFIG_DIR = BASE_DIR / "config"
 LOG_DIR = BASE_DIR / "logs"
 STATE_DIR = BASE_DIR / "state"
 DATA_DIR = BASE_DIR / "data"
+MUSIC_DIR = Path("/home/kxsbpi/music/reveil")
 
 SCRIPTS_DIR = BASE_DIR / "scripts"
 ALARM_SCRIPTS_DIR = SCRIPTS_DIR / "alarm"
@@ -30,6 +31,7 @@ MPV_SOCKET_FILE = Path("/tmp/mpv_socket")
 
 PLAY_SCRIPT = PLAYER_SCRIPTS_DIR / "play_reveil.sh"
 PLAY_URL_SCRIPT = PLAYER_SCRIPTS_DIR / "play_url.sh"
+PLAY_FILE_SCRIPT = PLAYER_SCRIPTS_DIR / "play_file.sh"
 UPDATE_SCRIPT = PLAYLIST_SCRIPTS_DIR / "update_playlist.sh"
 RADIO_META_SCRIPT = RADIO_SCRIPTS_DIR / "radio_meta.py"
 

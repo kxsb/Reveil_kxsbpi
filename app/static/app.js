@@ -456,6 +456,8 @@ async function updateStatus(dataOverride = null) {
 
       } else if (data.mode === "youtube") {
         dashboardSub.textContent = "Audio YouTube";
+      } else if (data.mode === "local") {
+        dashboardSub.textContent = "Fichier local";
       } else {
         dashboardSub.textContent = "Lecture en cours";
       }
@@ -896,6 +898,106 @@ if (playerUrlForm && playerUrlInput) {
       }
     } catch (e) {
       if (actionStatus) actionStatus.textContent = "Erreur réseau";
+    }
+  });
+}
+
+
+// ===============================
+// Lecteur : dossier musique local
+// ===============================
+
+const musicLibraryToggle = document.getElementById("musicLibraryToggle");
+const musicLibraryList = document.getElementById("musicLibraryList");
+const musicLibraryCount = document.getElementById("musicLibraryCount");
+
+let musicLibraryLoaded = false;
+
+function renderMusicLibrary(files) {
+  if (!musicLibraryList) return;
+
+  musicLibraryList.innerHTML = "";
+
+  if (!files || files.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "small music-empty";
+    empty.textContent = "Aucun fichier audio local.";
+    musicLibraryList.appendChild(empty);
+    return;
+  }
+
+  files.forEach((file) => {
+    const button = document.createElement("button");
+    button.className = "music-file-choice";
+    button.type = "button";
+    button.dataset.path = file.path;
+
+    button.innerHTML = `
+      <span>${file.label || file.filename}</span>
+      <small>${file.filename}</small>
+    `;
+
+    button.addEventListener("click", async () => {
+      const data = new FormData();
+      data.append("path", file.path);
+
+      if (actionStatus) actionStatus.textContent = "Lancement…";
+
+      try {
+        const res = await fetch("/play_file", {
+          method: "POST",
+          body: data,
+        });
+
+        const json = await res.json();
+
+        if (actionStatus) {
+          actionStatus.textContent = json.message || (json.ok ? "Lecture lancée" : "Erreur");
+        }
+
+        if (json.ok) {
+          musicLibraryList.classList.add("hidden");
+          setTimeout(playerTick, 1200);
+        }
+      } catch (e) {
+        if (actionStatus) actionStatus.textContent = "Erreur réseau";
+      }
+    });
+
+    musicLibraryList.appendChild(button);
+  });
+}
+
+async function loadMusicLibrary() {
+  if (!musicLibraryList) return;
+
+  try {
+    const res = await fetch("/music_files", { cache: "no-store" });
+    const data = await res.json();
+
+    if (!data.ok) {
+      throw new Error(data.message || "Erreur dossier musique");
+    }
+
+    const files = data.files || [];
+
+    if (musicLibraryCount) {
+      musicLibraryCount.textContent = files.length ? `${files.length} son(s)` : "";
+    }
+
+    renderMusicLibrary(files);
+    musicLibraryLoaded = true;
+  } catch (e) {
+    musicLibraryList.innerHTML = `<p class="small music-empty">Impossible de lire le dossier musique.</p>`;
+  }
+}
+
+if (musicLibraryToggle && musicLibraryList) {
+  musicLibraryToggle.addEventListener("click", async () => {
+    musicLibraryList.classList.toggle("hidden");
+
+    if (!musicLibraryLoaded) {
+      await loadMusicLibrary();
     }
   });
 }
