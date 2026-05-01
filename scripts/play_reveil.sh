@@ -296,6 +296,11 @@ else
     exit 1
   fi
 
+  if [ "$MODE" = "random" ]; then
+    log "Mode random : mélange de la playlist"
+    mapfile -d '' TRACKS < <(printf '%s\0' "${TRACKS[@]}" | shuf -z)
+  fi
+
   log "Playlist détectée : ${#TRACKS[@]} piste(s)"
 fi
 
