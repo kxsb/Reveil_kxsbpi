@@ -578,3 +578,84 @@ footer {
     opacity: 1;
   }
 }
+
+/* =========================================================
+   ALARM INLINE EDITOR
+   ========================================================= */
+
+.alarm-dashboard {
+  cursor: pointer;
+}
+
+.alarm-dashboard.is-editing {
+  background:
+    radial-gradient(circle at top right, rgba(138,95,130,.22), transparent 38%),
+    linear-gradient(135deg, #29283a, #1a1a24);
+}
+
+.alarm-inline-editor {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  cursor: default;
+}
+
+.alarm-inline-editor.hidden {
+  display: none;
+}
+
+.alarm-inline-editor input,
+.alarm-inline-editor select {
+  margin-top: 2px;
+}
+
+.alarm-dashboard-hint {
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: .82rem;
+}
+
+/* =========================================================
+   ALARM SIMPLIFIED LAYOUT
+   ========================================================= */
+
+.alarm-summary-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.alarm-source-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: .85rem;
+  font-weight: 700;
+  background: rgba(255,255,255,.10);
+  color: var(--text);
+  border: 1px solid rgba(255,255,255,.08);
+}
+
+.action-status.hidden {
+  display: none;
+}
+
+.alarm-dashboard .dashboard-time {
+  line-height: 1;
+}
+
+.alarm-dashboard .dashboard-sub {
+  margin: 0;
+}
+
+.alarm-dashboard .dashboard-label {
+  margin-bottom: 14px;
+}
+
+.alarm-dashboard.is-editing #dashboardTime,
+.alarm-dashboard.is-editing .alarm-summary-line {
+  opacity: .72;
+}

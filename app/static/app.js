@@ -243,12 +243,16 @@ async function refreshAlarmStatus() {
       dashboardSub.dataset.default = data.next_alarm;
     }
 
-    if (alarmTime && data.alarm_time) {
+    const alarmEditorIsOpen =
+      alarmInlineEditor && !alarmInlineEditor.classList.contains("hidden");
+
+    if (!alarmEditorIsOpen && alarmTime && data.alarm_time) {
       alarmTime.value = data.alarm_time;
     }
 
-    if (alarmMode && data.alarm_mode) {
+    if (!alarmEditorIsOpen && alarmMode && data.alarm_mode) {
       alarmMode.value = data.alarm_mode;
+      alarmMode.dataset.current = data.alarm_mode;
     }
   } catch (e) {
     console.error("alarm status error", e);
@@ -312,6 +316,7 @@ async function loadRadioStations() {
     const stations = data.stations || {};
     buildRadioMenu(stations);
     buildAlarmSourceOptions(stations);
+    updateAlarmSourceBadge(stations);
 
   } catch (e) {
     console.error("radio_stations error", e);
@@ -532,3 +537,84 @@ async function refreshPlaybackUx() {
 
 refreshPlaybackUx();
 setInterval(refreshPlaybackUx, 3000);
+
+// ===============================
+// Réveil : édition inline dans le dashboard
+// ===============================
+
+const alarmDashboard = document.getElementById("alarmDashboard");
+const alarmInlineEditor = document.getElementById("alarmInlineEditor");
+
+function openAlarmEditor() {
+  if (!alarmDashboard || !alarmInlineEditor) return;
+
+  alarmInlineEditor.classList.remove("hidden");
+  alarmDashboard.classList.add("is-editing");
+
+  if (alarmTime) {
+    setTimeout(() => alarmTime.focus(), 80);
+  }
+}
+
+function closeAlarmEditor() {
+  if (!alarmDashboard || !alarmInlineEditor) return;
+
+  alarmInlineEditor.classList.add("hidden");
+  alarmDashboard.classList.remove("is-editing");
+}
+
+function toggleAlarmEditor() {
+  if (!alarmInlineEditor) return;
+
+  if (alarmInlineEditor.classList.contains("hidden")) {
+    openAlarmEditor();
+  } else {
+    closeAlarmEditor();
+  }
+}
+
+if (alarmDashboard && alarmInlineEditor) {
+  alarmDashboard.addEventListener("click", (event) => {
+    if (event.target.closest("#alarmInlineEditor")) return;
+    toggleAlarmEditor();
+  });
+}
+
+function formatAlarmModeLabel(mode, stations = {}) {
+  if (!mode) return "Source";
+
+  if (mode === "playlist") return "Playlist réveil";
+  if (mode === "random") return "Aléatoire";
+
+  if (mode.startsWith("radio:")) {
+    const stationId = mode.split(":")[1] || "";
+    const station = stations[stationId];
+    return station ? `Radio — ${station.label || stationId}` : `Radio — ${stationId}`;
+  }
+
+  if (mode === "fip") return "Radio — FIP";
+
+  return mode;
+}
+
+function updateAlarmSourceBadge(stations = {}) {
+  const badge = document.getElementById("alarmSourceBadge");
+  if (!badge || !alarmMode) return;
+
+  badge.textContent = formatAlarmModeLabel(alarmMode.value || alarmMode.dataset.current, stations);
+}
+
+function showActionStatus(message, duration = 2500) {
+  const el = document.getElementById("actionStatus");
+  if (!el) return;
+
+  el.textContent = message;
+  el.classList.remove("hidden");
+
+  if (duration > 0) {
+    window.clearTimeout(el._hideTimer);
+    el._hideTimer = window.setTimeout(() => {
+      el.classList.add("hidden");
+    }, duration);
+  }
+}

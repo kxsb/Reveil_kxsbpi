@@ -14,21 +14,44 @@
       <div>
         <p class="eyebrow">Réveil local</p>
         <h1>⏰ Réveil Pi</h1>
-        <p id="heroNextAlarm" class="dashboard-sub">{{ next_alarm }}</p>
+        
       </div>
       <a class="pill home-link" href="/">Accueil</a>
     </header>
 
-    <section class="dashboard">
-      <p class="dashboard-label" id="dashboardLabel">Prochain réveil</p>
+    <section id="alarmDashboard" class="dashboard alarm-dashboard">
+      <p class="dashboard-label">Prochain réveil</p>
 
-      <div id="dashboardTime" class="dashboard-time" data-default="{{ current }}">
-        {{ current }}
+      <div id="dashboardTime" class="dashboard-time" data-default="--:--">
+        {{ alarm_time if alarm_time else "--:--" }}
       </div>
 
-      <p id="dashboardSub" class="dashboard-sub" data-default="{{ next_alarm }}">
-        {{ next_alarm }}
-      </p>
+      <div class="alarm-summary-line">
+        <span id="alarmSourceBadge" class="alarm-source-badge">{{ alarm_mode }}</span>
+        <span id="dashboardSub" class="dashboard-sub" data-default="{{ next_alarm }}">
+          {{ next_alarm }}
+        </span>
+      </div>
+
+      <div id="alarmInlineEditor" class="alarm-inline-editor hidden">
+        <div class="field-row">
+          <div>
+            <label>Heure</label>
+            <input id="alarmTime" type="time" value="{{ alarm_time }}">
+          </div>
+
+          <div>
+            <label>Source</label>
+            <select id="alarmMode" data-current="{{ alarm_mode }}">
+              <option value="random" {{ "selected" if alarm_mode == "random" else "" }}>Aléatoire</option>
+              <option value="playlist" {{ "selected" if alarm_mode == "playlist" else "" }}>Playlist réveil</option>
+              <optgroup id="alarmRadioOptions" label="Radios"></optgroup>
+            </select>
+          </div>
+        </div>
+
+        <p id="saveStatus" class="small status-line">Réglage automatique activé</p>
+      </div>
 
       <div id="liveWaveform" class="live-waveform hidden" aria-hidden="true">
         <i></i><i></i><i></i><i></i><i></i>
@@ -42,29 +65,8 @@
         <p id="fadeGraphLabel"></p>
       </div>
     </section>
-
-    <section class="card compact-card">
-      <div class="field-row">
-        <div>
-          <label>Heure</label>
-          <input id="alarmTime" type="time" value="{{ alarm_time }}">
-        </div>
-
-        <div>
-          <label>Source</label>
-          <select id="alarmMode" data-current="{{ alarm_mode }}">
-            <option value="random" {{ "selected" if alarm_mode == "random" else "" }}>Aléatoire</option>
-            <option value="playlist" {{ "selected" if alarm_mode == "playlist" else "" }}>Playlist réveil</option>
-            <optgroup id="alarmRadioOptions" label="Radios"></optgroup>
-          </select>
-        </div>
-      </div>
-
-      <p id="saveStatus" class="small status-line">✔ Réglage automatique activé</p>
-    </section>
-
-    <section class="actions">
-      <p id="actionStatus" class="small action-status">Prêt.</p>
+<section class="actions">
+      <p id="actionStatus" class="small action-status hidden">Prêt.</p>
 
       
 
