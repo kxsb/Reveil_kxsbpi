@@ -12,8 +12,8 @@ mkdir -p "$BASE/logs"
 
 FILE="$(find "$MUSIC_DIR" -type f \( -iname "*.mp3" -o -iname "*.m4a" -o -iname "*.webm" -o -iname "*.opus" -o -iname "*.aac" -o -iname "*.flac" \) | shuf -n 1)"
 
-if [ -z "$FILE" ]; then
-  echo "Aucun fichier audio trouvé dans $MUSIC_DIR"
+if [ -z "${FILE:-}" ]; then
+  echo "Aucun fichier audio trouvé dans $MUSIC_DIR" | tee -a "$LOG_FILE"
   exit 1
 fi
 
