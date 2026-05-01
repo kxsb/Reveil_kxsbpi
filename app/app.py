@@ -1,7 +1,6 @@
 from flask import Flask, request, redirect, render_template, jsonify
 import subprocess
 from datetime import datetime
-import re
 import json
 import time
 
@@ -30,6 +29,11 @@ from services.alarm_service import (
     parse_alarm,
     next_alarm_label,
 )
+from services.radio_service import (
+    read_radio_stations,
+    get_radio_station,
+    sanitize_station_id,
+)
 
 
 def log(msg):
@@ -37,22 +41,6 @@ def log(msg):
     LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
     with LOG_FILE.open("a", encoding="utf-8") as f:
         f.write(line)
-
-def read_radio_stations():
-    try:
-        if not RADIO_STATIONS_FILE.exists():
-            return {}
-
-        data = json.loads(RADIO_STATIONS_FILE.read_text(encoding="utf-8"))
-
-        if not isinstance(data, dict):
-            return {}
-
-        return data
-
-    except Exception as e:
-        log(f"Erreur lecture radio_stations : {e}")
-        return {}
 
 def run_process(args):
     log(f"Commande lancée : {' '.join(str(a) for a in args)}")
@@ -125,26 +113,25 @@ def play_playlist():
 
 @app.route("/play_radio/<station_id>", methods=["POST"])
 def play_radio(station_id):
-    safe_station_id = re.sub(r"[^a-zA-Z0-9_-]", "", station_id)
+    safe_station_id, station = get_radio_station(station_id)
 
     if not safe_station_id:
         return jsonify({"ok": False, "message": "Station invalide"})
 
-    stations = read_radio_stations()
-
-    if safe_station_id not in stations:
+    if not station:
         return jsonify({"ok": False, "message": "Station inconnue"})
 
     run_process(["/bin/bash", PLAY_SCRIPT, "radio", safe_station_id])
 
     settings = read_settings()
-    label = stations[safe_station_id].get("label", safe_station_id)
+    label = station.get("label", safe_station_id)
     message = f"📻 Radio lancée : {label}"
 
     if settings.get("ENABLE_FADE") == "1":
         message += " avec fade-in"
 
     return jsonify({"ok": True, "message": message})
+
 
 @app.route("/play_fip", methods=["POST"])
 def play_fip():
@@ -241,7 +228,7 @@ def status():
 
 @app.route("/radio_now/<station_id>")
 def radio_now(station_id):
-    safe_station_id = re.sub(r"[^a-zA-Z0-9_-]", "", station_id)
+    safe_station_id = sanitize_station_id(station_id)
 
     if not safe_station_id:
         return jsonify({"ok": False, "error": "Station invalide"})
