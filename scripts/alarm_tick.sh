@@ -10,25 +10,72 @@ PLAY_SCRIPT="$BASE/scripts/play_reveil.sh"
 LOG_FILE="$BASE/logs/alarm.log"
 LOCK_FILE="/tmp/reveil_alarm.lock"
 
+mkdir -p "$(dirname "$LOG_FILE")"
+
+log() {
+  echo "$(date '+%F %T') $*" >> "$LOG_FILE"
+}
+
+if [ ! -f "$CONFIG_FILE" ]; then
+  log "ERREUR: config introuvable: $CONFIG_FILE"
+  exit 1
+fi
+
+if [ ! -x "$PLAY_SCRIPT" ]; then
+  log "ERREUR: script de lecture introuvable ou non exécutable: $PLAY_SCRIPT"
+  exit 1
+fi
+
+if ! command -v mpv >/dev/null 2>&1; then
+  log "ERREUR: mpv introuvable"
+  exit 1
+fi
+
 CURRENT_TIME="$(date +"%H:%M")"
 TARGET_TIME="$(awk '{print $1}' "$CONFIG_FILE" 2>/dev/null || true)"
 MODE="$(awk '{print $2}' "$CONFIG_FILE" 2>/dev/null || true)"
+STATION_ID="$(awk '{print $3}' "$CONFIG_FILE" 2>/dev/null || true)"
 
-echo "$(date '+%F %T') check current=$CURRENT_TIME target=$TARGET_TIME mode=$MODE" >> "$LOG_FILE"
+if [ "$MODE" = "fip" ]; then
+  MODE="radio"
+  STATION_ID="fip"
+fi
+
+if [ "$MODE" = "radio" ] && [ -z "$STATION_ID" ]; then
+  STATION_ID="fip"
+  
+fi
+
+if ! echo "$TARGET_TIME" | grep -Eq '^([01][0-9]|2[0-3]):[0-5][0-9]$'; then
+  log "ERREUR: heure invalide dans config: target=$TARGET_TIME"
+  exit 1
+fi
+
+case "$MODE" in
+  playlist|random|radio)
+    ;;
+  "")
+    log "WARN: mode vide, fallback playlist"
+    MODE="playlist"
+    ;;
+  *)
+    log "WARN: mode invalide '$MODE', fallback playlist"
+    MODE="playlist"
+    ;;
+esac
+
+log "check current=$CURRENT_TIME target=$TARGET_TIME mode=$MODE station=$STATION_ID"
 
 if [ "$CURRENT_TIME" = "$TARGET_TIME" ] && [ ! -f "$LOCK_FILE" ]; then
-  echo "$(date '+%F %T') ALARM TRIGGER" >> "$LOG_FILE"
+  log "ALARM TRIGGER"
   touch "$LOCK_FILE"
 
   case "$MODE" in
-    fip)
-      /usr/bin/mpv --no-video --audio-device=alsa/plughw:CARD=Pro,DEV=0 "https://icecast.radiofrance.fr/fip-midfi.mp3" >> "$LOG_FILE" 2>&1 &
+    radio)
+      /bin/bash "$PLAY_SCRIPT" radio "$STATION_ID" >> "$LOG_FILE" 2>&1 &
       ;;
     playlist|random|"")
-      /bin/bash "$PLAY_SCRIPT" >> "$LOG_FILE" 2>&1 &
-      ;;
-    *)
-      /bin/bash "$PLAY_SCRIPT" >> "$LOG_FILE" 2>&1 &
+      /bin/bash "$PLAY_SCRIPT" "$MODE" >> "$LOG_FILE" 2>&1 &
       ;;
   esac
 fi

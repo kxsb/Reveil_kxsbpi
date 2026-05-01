@@ -14,12 +14,29 @@ BASE="$HOME/reveil"
 
 MUSIC_DIR="$HOME/music/reveil"
 LOUDNESS_INDEX="$BASE/data/loudness_index.json"
+
 SETTINGS_FILE="$BASE/config/reveil_settings.conf"
+
 LOG_FILE="$BASE/logs/player.log"
 STATE_DIR="$BASE/state"
 STATE_FILE="$STATE_DIR/player_state.json"
 
+mkdir -p "$BASE/logs" "$STATE_DIR"
+
 SOCKET="/tmp/mpv_socket"
+
+MODE="${1:-playlist}"
+STATION_ID="${2:-fip}"
+RADIO_STATIONS_FILE="$BASE/config/radio_stations.json"
+
+if [ "$MODE" = "fip" ]; then
+  MODE="radio"
+  STATION_ID="fip"
+fi
+
+if [ "$MODE" != "radio" ]; then
+  STATION_ID=""
+fi
 
 # ----------------------------------------------------------------------------
 # Réglages par défaut
@@ -54,14 +71,62 @@ log() {
   echo "$(date '+%F %T') $*" >> "$LOG_FILE"
 }
 
+get_radio_value() {
+  local station_id="$1"
+  local key="$2"
+
+  python3 - "$RADIO_STATIONS_FILE" "$station_id" "$key" <<'PY'
+import json
+import sys
+
+path, station_id, key = sys.argv[1], sys.argv[2], sys.argv[3]
+
+with open(path, "r", encoding="utf-8") as f:
+    stations = json.load(f)
+
+station = stations.get(station_id, {})
+print(station.get(key, ""))
+PY
+}
+
+radio_stream_url() {
+  get_radio_value "$STATION_ID" "stream_url"
+}
+
+radio_fallback_url() {
+  get_radio_value "$STATION_ID" "fallback_url"
+}
+
+source_label() {
+  case "$MODE" in
+    radio)
+      get_radio_value "$STATION_ID" "label"
+      ;;
+    random)
+      echo "Aléatoire"
+      ;;
+    playlist|"")
+      echo "Playlist"
+      ;;
+    *)
+      echo "$MODE"
+      ;;
+  esac
+}
+
 write_state_fading() {
   local started_at="$1"
+  local label
+  label="$(source_label)"
 
   mkdir -p "$STATE_DIR"
 
   cat > "$STATE_FILE" <<EOF
 {
   "status": "fading",
+  "mode": "$MODE",
+  "station_id": "$STATION_ID",
+  "source_label": "$label",
   "started_at": $started_at,
   "fade_duration": $FADE_DURATION,
   "fade_curve": "$FADE_CURVE",
@@ -73,12 +138,17 @@ EOF
 
 write_state_playing() {
   local started_at="$1"
+  local label
+  label="$(source_label)"
 
   mkdir -p "$STATE_DIR"
 
   cat > "$STATE_FILE" <<EOF
 {
   "status": "playing",
+  "mode": "$MODE",
+  "station_id": "$STATION_ID",
+  "source_label": "$label",
   "started_at": $started_at
 }
 EOF
@@ -169,6 +239,8 @@ log "=== lancement réveil ==="
 STARTED_AT="$(date +%s)"
 log "Config: ENABLE_FADE=$ENABLE_FADE INITIAL_VOLUME=$INITIAL_VOLUME MAX_VOLUME=$MAX_VOLUME FADE_DURATION=$FADE_DURATION FADE_CURVE=$FADE_CURVE FADE_STEPS=$FADE_STEPS"
 
+
+
 # ----------------------------------------------------------------------------
 # Validation basique des réglages
 # ----------------------------------------------------------------------------
@@ -188,31 +260,55 @@ case "$ENABLE_FADE" in
 esac
 
 # ----------------------------------------------------------------------------
-# Récupération des pistes audio
+# Récupération de la source audio
 # ----------------------------------------------------------------------------
-mapfile -d '' TRACKS < <(
-  find "$MUSIC_DIR" -maxdepth 1 -type f \( \
-    -iname "*.mp3"  -o \
-    -iname "*.flac" -o \
-    -iname "*.wav"  -o \
-    -iname "*.m4a"  -o \
-    -iname "*.aac"  -o \
-    -iname "*.ogg"  -o \
-    -iname "*.opus" -o \
-    -iname "*.webm" \
-  \) -print0 | sort -z
-)
+if [ "$MODE" = "radio" ]; then
+  RADIO_URL="$(radio_stream_url)"
+  FALLBACK_URL="$(radio_fallback_url)"
 
-if [ "${#TRACKS[@]}" -eq 0 ]; then
-  log "ERREUR: aucun fichier audio trouvé dans $MUSIC_DIR"
-  exit 1
+  if [ -z "$RADIO_URL" ]; then
+    log "ERREUR: URL radio introuvable pour station=$STATION_ID"
+    exit 1
+  fi
+
+  TRACKS=("$RADIO_URL")
+  log "Mode radio sélectionné (HQ) : station=$STATION_ID url=$RADIO_URL"
+
+  USE_FALLBACK=0
+
+else
+
+  mapfile -d '' TRACKS < <(
+    find "$MUSIC_DIR" -maxdepth 1 -type f \( \
+      -iname "*.mp3"  -o \
+      -iname "*.flac" -o \
+      -iname "*.wav"  -o \
+      -iname "*.m4a"  -o \
+      -iname "*.aac"  -o \
+      -iname "*.ogg"  -o \
+      -iname "*.opus" -o \
+      -iname "*.webm" \
+    \) -print0 | sort -z
+  )
+
+  if [ "${#TRACKS[@]}" -eq 0 ]; then
+    log "ERREUR: aucun fichier audio trouvé dans $MUSIC_DIR"
+    exit 1
+  fi
+
+  log "Playlist détectée : ${#TRACKS[@]} piste(s)"
 fi
-
-log "Playlist détectée : ${#TRACKS[@]} piste(s)"
 
 # ----------------------------------------------------------------------------
 # Construction de la commande mpv
 # ----------------------------------------------------------------------------
+START_VOLUME="$INITIAL_VOLUME"
+if [ "$ENABLE_FADE" = "0" ]; then
+  START_VOLUME="$MAX_VOLUME"
+fi
+
+log "Volume de lancement : $START_VOLUME% fade=$ENABLE_FADE"
+
 MPV_CMD=(
   /usr/bin/mpv
   --no-video
@@ -220,24 +316,28 @@ MPV_CMD=(
   --audio-device=alsa/default
   --audio-format=float
   --audio-samplerate=48000
-  --volume="$INITIAL_VOLUME"
+  --volume="$START_VOLUME"
   --input-ipc-server="$SOCKET"
 )
 
 for TRACK in "${TRACKS[@]}"; do
-  REL_TRACK="${TRACK#$MUSIC_DIR/}"
-  GAIN_DB="$(get_gain_db "$REL_TRACK")"
-  GAIN_DB="$(printf '%s' "$GAIN_DB" | tr -d '\r\n')"
-
-  log "Piste : $REL_TRACK | gain brut : $GAIN_DB dB"
-
   MPV_CMD+=(--{)
 
-  if is_number "$GAIN_DB"; then
-    MPV_CMD+=(--af="volume=${GAIN_DB}dB")
-    log "Gain loudness appliqué : $REL_TRACK => ${GAIN_DB} dB"
+  if [ "$MODE" = "radio" ]; then
+    log "Source stream radio : $(source_label)"
   else
-    log "Gain invalide pour $REL_TRACK, lecture sans correction"
+    REL_TRACK="${TRACK#$MUSIC_DIR/}"
+    GAIN_DB="$(get_gain_db "$REL_TRACK")"
+    GAIN_DB="$(printf '%s' "$GAIN_DB" | tr -d '\r\n')"
+
+    log "Piste : $REL_TRACK | gain brut : $GAIN_DB dB"
+
+    if is_number "$GAIN_DB"; then
+      MPV_CMD+=(--af="volume=${GAIN_DB}dB")
+      log "Gain loudness appliqué : $REL_TRACK => ${GAIN_DB} dB"
+    else
+      log "Gain invalide pour $REL_TRACK, lecture sans correction"
+    fi
   fi
 
   MPV_CMD+=("$TRACK")
@@ -248,9 +348,35 @@ done
 # Lancement mpv
 # ----------------------------------------------------------------------------
 "${MPV_CMD[@]}" >> "$LOG_FILE" 2>&1 &
-
 MPV_PID=$!
 log "mpv lancé PID=$MPV_PID"
+
+sleep 2
+
+if ! kill -0 "$MPV_PID" 2>/dev/null; then
+  log "Échec flux principal, tentative fallback..."
+
+  if [ "$MODE" = "radio" ] && [ -n "$FALLBACK_URL" ]; then
+    MPV_CMD=(
+      /usr/bin/mpv
+      --no-video
+      --ao=alsa
+      --audio-device=alsa/default
+      --audio-format=float
+      --audio-samplerate=48000
+      --volume="$START_VOLUME"
+      --input-ipc-server="$SOCKET"
+      "$FALLBACK_URL"
+    )
+
+    "${MPV_CMD[@]}" >> "$LOG_FILE" 2>&1 &
+    MPV_PID=$!
+    log "Fallback lancé : $FALLBACK_URL"
+  else
+    log "Aucun fallback disponible"
+    exit 1
+  fi
+fi
 
 # ----------------------------------------------------------------------------
 # Attente socket IPC

@@ -19,6 +19,16 @@ mkdir -p "$HOME/music"
 mkdir -p "$BASE/data"
 mkdir -p "$BASE/logs"
 
+LOCK_FILE="/tmp/reveil_update_playlist.lock"
+exec 9>"$LOCK_FILE"
+if ! flock -n 9; then
+  echo "Mise à jour déjà en cours, abandon." | tee -a "$LOG_FILE"
+  exit 1
+fi
+
+rm -rf "$TMP_DIR"
+mkdir -p "$TMP_DIR"
+
 cd "$HOME" || exit 1
 
 if [ ! -x "$YTDLP" ]; then
