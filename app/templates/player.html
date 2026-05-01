@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lecteur Pi</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+  <main class="app">
+
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Lecteur local</p>
+        <h1>🎧 Lecteur Pi</h1>
+      </div>
+      <a class="pill home-link" href="/">Accueil</a>
+    </header>
+
+    <section class="dashboard player-dashboard">
+      <p class="dashboard-label" id="dashboardLabel">Lecture</p>
+
+      <div id="dashboardTime" class="dashboard-time" data-default="YouTube">
+        YouTube
+      </div>
+
+      <p id="dashboardSub" class="dashboard-sub" data-default="Colle une URL">
+        Colle une URL YouTube
+      </p>
+
+      <div id="liveWaveform" class="live-waveform hidden" aria-hidden="true">
+        <i></i><i></i><i></i><i></i><i></i>
+      </div>
+
+      <form id="playerUrlForm" class="player-url-form" data-player-url-form>
+        <input
+          id="playerUrlInput"
+          name="url"
+          type="url"
+          inputmode="url"
+          autocomplete="off"
+          placeholder="https://youtu.be/..."
+          required
+        >
+        <button class="action" type="submit">Lire</button>
+      </form>
+    </section>
+
+    <section class="actions">
+      <form class="js-stop-form hidden" action="/stop" method="post">
+        <button class="action danger" type="submit">⏹ Stop</button>
+      </form>
+
+      <p id="actionStatus" class="small action-status"></p>
+    </section>
+
+    <footer class="footer-signature">
+      tu peux toujours rêver
+    </footer>
+
+  </main>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

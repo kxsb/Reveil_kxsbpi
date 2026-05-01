@@ -1,4 +1,5 @@
 from flask import Flask, request, redirect, render_template, jsonify
+from urllib.parse import urlparse
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 
@@ -9,6 +10,7 @@ from services.paths import (
     WEB_LOG_FILE as LOG_FILE,
     SCRIPTS_DIR,
     PLAY_SCRIPT,
+    PLAY_URL_SCRIPT,
     UPDATE_SCRIPT,
     STATE_FILE,
     RADIO_STATIONS_FILE,
@@ -64,6 +66,11 @@ def radio_page():
     return render_template("radio.html")
 
 
+@app.route("/player")
+def player_page():
+    return render_template("player.html")
+
+
 @app.route("/set_ajax", methods=["POST"])
 def set_alarm_ajax():
     time_value = request.form.get("time", "").strip()
@@ -109,6 +116,43 @@ def play_radio(station_id):
 
     return jsonify({"ok": True, "message": message})
 
+
+
+@app.route("/play_url", methods=["POST"])
+def play_url():
+    url = request.form.get("url", "").strip()
+
+    if not url:
+        return jsonify({"ok": False, "message": "URL manquante"})
+
+    parsed = urlparse(url)
+    host = (parsed.netloc or "").lower()
+
+    allowed_hosts = {
+        "youtube.com",
+        "www.youtube.com",
+        "m.youtube.com",
+        "music.youtube.com",
+        "youtu.be",
+    }
+
+    if parsed.scheme not in ["http", "https"] or host not in allowed_hosts:
+        return jsonify({
+            "ok": False,
+            "message": "URL YouTube invalide",
+        })
+
+    try:
+        stop_mpv()
+    except Exception as e:
+        log(f"Erreur stop avant lecture URL : {e}")
+
+    run_process(["/bin/bash", PLAY_URL_SCRIPT, url])
+
+    return jsonify({
+        "ok": True,
+        "message": "🎧 Lecture YouTube lancée",
+    })
 
 
 @app.route("/stop", methods=["POST"])

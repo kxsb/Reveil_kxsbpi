@@ -1078,3 +1078,47 @@ footer {
 }\n\n.action-status:empty {
   display: none;
 }\n
+
+/* =========================================================
+   UI PLAYER — URL YouTube
+   ========================================================= */
+
+.player-url-form {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.player-url-form input {
+  width: 100%;
+  min-height: 50px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 16px;
+  background: rgba(255,255,255,.055);
+  color: var(--text);
+  padding: 0 14px;
+  font: inherit;
+  outline: none;
+}
+
+.player-url-form input::placeholder {
+  color: var(--muted);
+  opacity: .55;
+}
+
+.player-url-form input:focus {
+  border-color: rgba(255,255,255,.22);
+  box-shadow: 0 0 0 3px rgba(138,95,130,.16);
+}
+
+.player-url-form .action {
+  min-height: 52px;
+}
+
+@media (min-width: 520px) {
+  .player-url-form {
+    grid-template-columns: 1fr 116px;
+    align-items: center;
+  }
+}

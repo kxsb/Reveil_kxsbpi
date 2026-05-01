@@ -146,7 +146,7 @@ refreshFadeVisibility();
 
 const actionStatus = document.getElementById("actionStatus");
 
-document.querySelectorAll("form[action]").forEach((form) => {
+document.querySelectorAll("form[action]:not([data-player-url-form])").forEach((form) => {
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
 
@@ -397,7 +397,6 @@ async function updateStatus(dataOverride = null) {
     }
 
     const hasDashboard =
-      fadeGraph &&
       dashboardLabel &&
       dashboardTime &&
       dashboardSub;
@@ -407,7 +406,7 @@ async function updateStatus(dataOverride = null) {
     }
 
     if (data.status === "fading") {
-      fadeGraph.classList.remove("hidden");
+      if (fadeGraph) fadeGraph.classList.remove("hidden");
 
       const label = data.source_label || "Réveil";
 
@@ -422,18 +421,20 @@ async function updateStatus(dataOverride = null) {
       const x = progress * 100;
       const y = 60 - p * 50;
 
-      fadeCurvePath.setAttribute("d", buildCurvePath(data.fade_curve));
-      fadeDot.setAttribute("cx", x);
-      fadeDot.setAttribute("cy", y);
+      if (fadeCurvePath && fadeDot && fadeGraphLabel) {
+        fadeCurvePath.setAttribute("d", buildCurvePath(data.fade_curve));
+        fadeDot.setAttribute("cx", x);
+        fadeDot.setAttribute("cy", y);
 
-      fadeGraphLabel.textContent =
-        Math.round(p * (data.max_volume - data.initial_volume) + parseInt(data.initial_volume)) + "%";
+        fadeGraphLabel.textContent =
+          Math.round(p * (data.max_volume - data.initial_volume) + parseInt(data.initial_volume)) + "%";
+      }
 
       return;
     }
 
     if (data.status === "playing") {
-      fadeGraph.classList.add("hidden");
+      if (fadeGraph) fadeGraph.classList.add("hidden");
 
       const label = data.source_label || "Lecture";
 
@@ -453,8 +454,10 @@ async function updateStatus(dataOverride = null) {
           updateRadioNow(data.station_id);
         }
 
+      } else if (data.mode === "youtube") {
+        dashboardSub.textContent = "Audio YouTube";
       } else {
-        dashboardSub.textContent = "Fade terminé";
+        dashboardSub.textContent = "Lecture en cours";
       }
 
       return;
@@ -548,11 +551,14 @@ function buildAlarmSourceOptions(stations) {
   });
 }
 
+let latestPlaybackData = null;
+
 // Surveille le statut player avec un seul fetch partagé.
 async function playerTick() {
   try {
     const res = await fetch("/status", { cache: "no-store" });
     const data = await res.json();
+    latestPlaybackData = data;
 
     await updateStatus(data);
     updatePlaybackUx(data);
@@ -812,15 +818,26 @@ async function pollPremiumWaveformLevel() {
     const res = await fetch("/waveform", { cache: "no-store" });
     const data = await res.json();
 
-    premiumWaveform.active = Boolean(data && data.active);
+    const playbackActive =
+      latestPlaybackData &&
+      ["playing", "fading"].includes(latestPlaybackData.status);
 
     if (data && data.active) {
+      premiumWaveform.active = true;
+
       let level = Number(data.level || 0);
 
       // Compression musicale : évite que l'onde soit plate ou hystérique.
       level = Math.sqrt(Math.max(0, Math.min(1, level)));
       premiumWaveform.targetLevel = Math.max(0.08, Math.min(1, level));
+    } else if (playbackActive) {
+      // Fallback visuel : certaines sources, notamment YouTube via yt-dlp,
+      // peuvent être lisibles par mpv mais non rouvertes proprement par ffmpeg.
+      // On garde alors une onde douce pour signaler la lecture active.
+      premiumWaveform.active = true;
+      premiumWaveform.targetLevel = latestPlaybackData.mode === "youtube" ? 0.18 : 0.12;
     } else {
+      premiumWaveform.active = false;
       premiumWaveform.targetLevel = 0;
     }
   } catch (e) {
@@ -837,3 +854,48 @@ setInterval(() => {
 
 pollPremiumWaveformLevel();
 requestAnimationFrame(animatePremiumWaveforms);
+
+
+// ===============================
+// Lecteur YouTube audio
+// ===============================
+
+const playerUrlForm = document.getElementById("playerUrlForm");
+const playerUrlInput = document.getElementById("playerUrlInput");
+
+if (playerUrlForm && playerUrlInput) {
+  playerUrlForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const url = playerUrlInput.value.trim();
+
+    if (!url) {
+      if (actionStatus) actionStatus.textContent = "URL manquante";
+      return;
+    }
+
+    const data = new FormData();
+    data.append("url", url);
+
+    if (actionStatus) actionStatus.textContent = "Lancement…";
+
+    try {
+      const res = await fetch("/play_url", {
+        method: "POST",
+        body: data,
+      });
+
+      const json = await res.json();
+
+      if (actionStatus) {
+        actionStatus.textContent = json.message || (json.ok ? "Lecture lancée" : "Erreur");
+      }
+
+      if (json.ok && typeof playerTick === "function") {
+        setTimeout(playerTick, 1200);
+      }
+    } catch (e) {
+      if (actionStatus) actionStatus.textContent = "Erreur réseau";
+    }
+  });
+}

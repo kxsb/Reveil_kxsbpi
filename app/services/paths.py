@@ -29,6 +29,7 @@ MPV_PID_FILE = STATE_DIR / "mpv.pid"
 MPV_SOCKET_FILE = Path("/tmp/mpv_socket")
 
 PLAY_SCRIPT = PLAYER_SCRIPTS_DIR / "play_reveil.sh"
+PLAY_URL_SCRIPT = PLAYER_SCRIPTS_DIR / "play_url.sh"
 UPDATE_SCRIPT = PLAYLIST_SCRIPTS_DIR / "update_playlist.sh"
 RADIO_META_SCRIPT = RADIO_SCRIPTS_DIR / "radio_meta.py"
 
