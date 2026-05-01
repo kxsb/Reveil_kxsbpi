@@ -1,5 +1,4 @@
 from flask import Flask, request, redirect, render_template, jsonify
-from datetime import datetime
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 
