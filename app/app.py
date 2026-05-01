@@ -31,9 +31,6 @@ from services.alarm_service import (
     next_alarm_label,
 )
 
-ALLOWED_MODES = ["playlist", "radio", "random", "fip"]
-
-TIME_RE = re.compile(r"^([01][0-9]|2[0-3]):[0-5][0-9]$")
 
 def log(msg):
     line = f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {msg}\n"
@@ -116,7 +113,6 @@ def set_alarm():
     write_alarm(time_value, mode)
     return redirect("/")
 
-
 @app.route("/test", methods=["POST"])
 def test_sound():
     run_process(["/bin/bash", TEST_SCRIPT])
@@ -150,11 +146,9 @@ def play_radio(station_id):
 
     return jsonify({"ok": True, "message": message})
 
-
 @app.route("/play_fip", methods=["POST"])
 def play_fip():
     return play_radio("fip")
-
 
 @app.route("/stop", methods=["POST"])
 def stop():
@@ -174,7 +168,6 @@ def stop():
         log(f"Erreur stop : {e}")
 
     return jsonify({"ok": True, "message": "🛑 Lecture arrêtée"})
-
 
 @app.route("/update_playlist", methods=["POST"])
 def update_playlist():

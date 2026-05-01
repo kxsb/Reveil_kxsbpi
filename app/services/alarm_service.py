@@ -18,9 +18,7 @@ def read_alarm():
     try:
         if not REVEIL_FILE.exists():
             return "non réglé"
-
         return REVEIL_FILE.read_text(encoding="utf-8").strip() or "non réglé"
-
     except Exception as e:
         _log(f"Erreur lecture réveil : {e}")
         return "non réglé"
@@ -37,7 +35,6 @@ def write_alarm(time_value, mode):
 
     REVEIL_FILE.parent.mkdir(parents=True, exist_ok=True)
     REVEIL_FILE.write_text(f"{time_value} {mode}\n", encoding="utf-8")
-
     _log(f"Réveil réglé : {time_value} {mode}")
     return True
 
@@ -57,7 +54,7 @@ def parse_alarm():
 
 
 def next_alarm_label():
-    alarm_time, alarm_mode = parse_alarm()
+    alarm_time, _alarm_mode = parse_alarm()
 
     if not TIME_RE.match(alarm_time):
         return "Aucun réveil programmé"
