@@ -569,11 +569,51 @@ function markHomePlayingTile(data) {
 }
 
 function updatePlaybackUx(data) {
-  const isPlaying = data && ["playing", "fading"].includes(data.status);
+  const isPlaying =
+    data &&
+    ["playing", "fading"].includes(data.status);
 
-  setStopVisible(isPlaying);
-  setWaveformVisible(isPlaying);
-  markHomePlayingTile(data);
+  // Boutons stop visibles seulement pendant une lecture.
+  document.querySelectorAll(".js-stop-form").forEach((form) => {
+    form.classList.toggle("hidden", !isPlaying);
+  });
+
+  // Nettoyage des tuiles accueil.
+  document.querySelectorAll("[data-home-app]").forEach((tile) => {
+    tile.classList.remove("active", "playing", "is-playing");
+
+    const wave = tile.querySelector(".mini-waveform");
+    if (wave) {
+      wave.classList.add("hidden");
+    }
+  });
+
+  if (!isPlaying) return;
+
+  let app = "player";
+
+  // Priorité au contexte : sleep/alarm sont des usages,
+  // radio/youtube/local sont des modes techniques.
+  if (data.context === "sleep") {
+    app = "sleep";
+  } else if (data.context === "alarm") {
+    app = "alarm";
+  } else if (data.mode === "radio") {
+    app = "radio";
+  } else if (data.mode === "youtube" || data.mode === "local") {
+    app = "player";
+  }
+
+  const target = document.querySelector(`[data-home-app="${app}"]`);
+
+  if (!target) return;
+
+  target.classList.add("active", "playing", "is-playing");
+
+  const wave = target.querySelector(".mini-waveform");
+  if (wave) {
+    wave.classList.remove("hidden");
+  }
 }
 
 function buildAlarmSourceOptions(stations, playlists = []) {
@@ -1665,4 +1705,440 @@ async function loadMusicLibrary(path = "") {
   } catch (e) {
     musicLibraryList.innerHTML = `<p class="small music-empty">Impossible de lire le dossier musique.</p>`;
   }
+}
+
+
+// ===============================
+// Anti-veille
+// ===============================
+
+const sleepDashboard = document.getElementById("sleepDashboard");
+const sleepInlineEditor = document.getElementById("sleepInlineEditor");
+const sleepSettingsToggle = document.getElementById("sleepSettingsToggle");
+const sleepSettingsContent = document.getElementById("sleepSettingsContent");
+
+const sleepForm = document.getElementById("sleepForm");
+const sleepTime = document.getElementById("sleepTime");
+const sleepSource = document.getElementById("sleepSource");
+const sleepSourceBadge = document.getElementById("sleepSourceBadge");
+const sleepPlaylistOptions = document.getElementById("sleepPlaylistOptions");
+const sleepRadioOptions = document.getElementById("sleepRadioOptions");
+
+const sleepDuration = document.getElementById("sleepDuration");
+const sleepFadeEnabled = document.getElementById("sleepFadeEnabled");
+const sleepFadePanel = document.getElementById("sleepFadePanel");
+const sleepFadeCurveInput = document.getElementById("sleepFadeCurve");
+
+const sleepDurationChoices = document.querySelectorAll(".sleep-duration-choice");
+const sleepCurveChoices = document.querySelectorAll(".sleep-curve-choice");
+
+let sleepAutosaveTimer = null;
+let sleepIsLoading = false;
+
+function formatSleepSourceLabel(value) {
+  if (typeof formatAlarmModeLabel === "function") {
+    return formatAlarmModeLabel(
+      value || "random",
+      window.__radioStations || {},
+      window.__playlists || []
+    );
+  }
+
+  if (!value || value === "random") return "Aléatoire — Réveil";
+  if (value === "playlist") return "Playlist — Réveil";
+  if (value.startsWith("radio:")) return `Radio — ${value.split(":")[1] || ""}`;
+  if (value.startsWith("random:")) return `Aléatoire — ${value.split(":")[1] || ""}`;
+  if (value.startsWith("playlist:")) return `Playlist — ${value.split(":")[1] || ""}`;
+
+  return value;
+}
+
+function durationLabelFromSeconds(seconds) {
+  const minutes = Math.round(Number(seconds || 900) / 60);
+  return `${minutes} min`;
+}
+
+function activeSleepCurveLabel() {
+  const active = document.querySelector(".sleep-curve-choice.active");
+  const label = active ? active.querySelector("strong") : null;
+  return label ? label.textContent.trim() : "Arrivée douce";
+}
+
+function refreshSleepFadeVisibility() {
+  if (!sleepFadeEnabled || !sleepFadePanel) return;
+  sleepFadePanel.classList.toggle("hidden", !sleepFadeEnabled.checked);
+}
+
+function refreshSleepPreview(status = null) {
+  if (!dashboardTime || !dashboardSub) return;
+
+  const time = status ? status.sleep_time : (sleepTime ? sleepTime.value : "23:00");
+  const source = status ? status.sleep_source : (sleepSource ? sleepSource.value : "random");
+  const duration = status ? status.duration : (sleepDuration ? sleepDuration.value : "900");
+  const fadeEnabled = status ? status.fade_enabled === "1" : (!sleepFadeEnabled || sleepFadeEnabled.checked);
+  const until = status ? status.time_until : "";
+
+  dashboardTime.textContent = time || "23:00";
+
+  if (sleepSourceBadge) {
+    sleepSourceBadge.textContent = formatSleepSourceLabel(source);
+  }
+
+  if (until) {
+    dashboardSub.textContent = until;
+  } else if (fadeEnabled) {
+    dashboardSub.textContent = `Fade out ${durationLabelFromSeconds(duration)} · ${activeSleepCurveLabel()}`;
+  } else {
+    dashboardSub.textContent = `Stop direct après ${durationLabelFromSeconds(duration)}`;
+  }
+
+  refreshSleepFadeVisibility();
+}
+
+function applySleepStatus(status) {
+  if (!status || !status.ok) return;
+
+  sleepIsLoading = true;
+
+  if (sleepTime) sleepTime.value = status.sleep_time || "23:00";
+  if (sleepSource) sleepSource.value = status.sleep_source || "random";
+  if (sleepDuration) sleepDuration.value = status.duration || "900";
+
+  if (sleepFadeEnabled) {
+    sleepFadeEnabled.checked = status.fade_enabled === "1";
+  }
+
+  if (sleepFadeCurveInput) {
+    sleepFadeCurveInput.value = status.curve || "ease_out";
+  }
+
+  sleepDurationChoices.forEach((button) => {
+    button.classList.toggle("active", button.dataset.duration === (status.duration || "900"));
+  });
+
+  sleepCurveChoices.forEach((button) => {
+    button.classList.toggle("active", button.dataset.curve === (status.curve || "ease_out"));
+  });
+
+  refreshSleepPreview(status);
+
+  sleepIsLoading = false;
+}
+
+async function loadSleepStatus() {
+  if (!sleepForm) return;
+
+  try {
+    const res = await fetch("/sleep_status", { cache: "no-store" });
+    const data = await res.json();
+    applySleepStatus(data);
+  } catch (e) {
+    console.error("sleep status error", e);
+  }
+}
+
+function sleepFormData() {
+  const data = new FormData(sleepForm);
+
+  if (!sleepFadeEnabled || !sleepFadeEnabled.checked) {
+    data.set("fade_enabled", "0");
+  } else {
+    data.set("fade_enabled", "1");
+  }
+
+  if (sleepDuration) {
+    data.set("duration", sleepDuration.value || "900");
+  }
+
+  if (sleepFadeCurveInput) {
+    data.set("fade_curve", sleepFadeCurveInput.value || "ease_out");
+  }
+
+  return data;
+}
+
+async function saveSleepSettings() {
+  if (!sleepForm || sleepIsLoading) return;
+
+  if (actionStatus) {
+    actionStatus.textContent = "Sauvegarde anti-veille…";
+  }
+
+  try {
+    const res = await fetch("/sleep_start", {
+      method: "POST",
+      body: sleepFormData(),
+    });
+
+    const json = await res.json();
+
+    if (actionStatus) {
+      actionStatus.textContent = json.message || (json.ok ? "Paramètres anti-veille sauvegardés" : "Erreur");
+    }
+
+    if (json.ok) {
+      await loadSleepStatus();
+    }
+  } catch (e) {
+    if (actionStatus) {
+      actionStatus.textContent = "Erreur sauvegarde anti-veille";
+    }
+  }
+}
+
+function scheduleSleepAutosave() {
+  if (sleepIsLoading) return;
+
+  refreshSleepPreview();
+
+  if (sleepAutosaveTimer) {
+    clearTimeout(sleepAutosaveTimer);
+  }
+
+  sleepAutosaveTimer = setTimeout(saveSleepSettings, 350);
+}
+
+function buildSleepSourceOptions(stations, playlists = []) {
+  if (!sleepSource) return;
+
+  const current = sleepSource.value || "random";
+
+  if (sleepPlaylistOptions) {
+    sleepPlaylistOptions.innerHTML = "";
+
+    const normalizedPlaylists =
+      Array.isArray(playlists) && playlists.length > 0
+        ? playlists
+        : [{ id: "reveil", label: "Réveil" }];
+
+    normalizedPlaylists.forEach((playlist) => {
+      const id = playlist.id || "reveil";
+      const label = playlist.label || id;
+
+      [
+        [id === "reveil" ? "random" : `random:${id}`, `Aléatoire — ${label}`],
+        [id === "reveil" ? "playlist" : `playlist:${id}`, `Playlist — ${label}`],
+      ].forEach(([value, text]) => {
+        const option = document.createElement("option");
+        option.value = value;
+        option.textContent = text;
+
+        if (current === value) {
+          option.selected = true;
+        }
+
+        sleepPlaylistOptions.appendChild(option);
+      });
+    });
+  }
+
+  if (sleepRadioOptions) {
+    sleepRadioOptions.innerHTML = "";
+
+    Object.entries(stations || {}).forEach(([id, station]) => {
+      const option = document.createElement("option");
+      option.value = `radio:${id}`;
+      option.textContent = `Radio — ${station.label || id}`;
+
+      if (current === option.value) {
+        option.selected = true;
+      }
+
+      sleepRadioOptions.appendChild(option);
+    });
+  }
+
+  refreshSleepPreview();
+}
+
+async function loadSleepSources() {
+  if (!sleepSource) return;
+
+  try {
+    const [radioRes, playlistsRes] = await Promise.all([
+      fetch("/radio_stations", { cache: "no-store" }),
+      fetch("/playlists", { cache: "no-store" }),
+    ]);
+
+    const radioData = await radioRes.json();
+    const playlistsData = await playlistsRes.json();
+
+    const stations = radioData.ok ? (radioData.stations || {}) : {};
+    const playlists = playlistsData.ok ? (playlistsData.playlists || []) : [];
+
+    window.__radioStations = stations;
+    window.__playlists = playlists;
+
+    buildSleepSourceOptions(stations, playlists);
+    await loadSleepStatus();
+  } catch (e) {
+    console.error("sleep sources error", e);
+  }
+}
+
+function toggleSleepEditor() {
+  if (!sleepInlineEditor) return;
+  sleepInlineEditor.classList.toggle("hidden");
+}
+
+if (sleepDashboard && sleepInlineEditor) {
+  sleepDashboard.addEventListener("click", (event) => {
+    if (event.target.closest("#sleepInlineEditor")) return;
+    if (event.target.closest(".js-stop-form")) return;
+    toggleSleepEditor();
+  });
+
+  sleepDashboard.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    toggleSleepEditor();
+  });
+}
+
+if (sleepSettingsToggle && sleepSettingsContent) {
+  sleepSettingsToggle.addEventListener("click", () => {
+    sleepSettingsContent.classList.toggle("hidden");
+  });
+}
+
+if (sleepDurationChoices.length && sleepDuration) {
+  sleepDurationChoices.forEach((button) => {
+    button.addEventListener("click", () => {
+      sleepDuration.value = button.dataset.duration || "900";
+
+      sleepDurationChoices.forEach((item) => {
+        item.classList.toggle("active", item === button);
+      });
+
+      scheduleSleepAutosave();
+    });
+  });
+}
+
+if (sleepCurveChoices.length && sleepFadeCurveInput) {
+  sleepCurveChoices.forEach((button) => {
+    button.addEventListener("click", () => {
+      sleepFadeCurveInput.value = button.dataset.curve || "ease_out";
+
+      sleepCurveChoices.forEach((item) => {
+        item.classList.toggle("active", item === button);
+      });
+
+      scheduleSleepAutosave();
+    });
+  });
+}
+
+if (sleepForm) {
+  loadSleepSources();
+  refreshSleepPreview();
+  refreshSleepFadeVisibility();
+
+  [sleepTime, sleepSource].forEach((element) => {
+    if (element) {
+      element.addEventListener("change", scheduleSleepAutosave);
+      element.addEventListener("input", scheduleSleepAutosave);
+    }
+  });
+
+  if (sleepFadeEnabled) {
+    sleepFadeEnabled.addEventListener("change", scheduleSleepAutosave);
+  }
+
+  sleepForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    await saveSleepSettings();
+  });
+}
+
+
+// ===============================
+// Waveform visible dans le module actif
+// ===============================
+
+function currentModuleNameForWaveform() {
+  if (document.body.classList.contains("page-alarm")) return "alarm";
+  if (document.body.classList.contains("page-sleep")) return "sleep";
+  if (document.body.classList.contains("page-radio")) return "radio";
+  if (document.body.classList.contains("page-player")) return "player";
+  return "";
+}
+
+function playbackBelongsToCurrentModule(data) {
+  if (!data || !["playing", "fading"].includes(data.status)) return false;
+
+  const moduleName = currentModuleNameForWaveform();
+
+  if (moduleName === "alarm") {
+    return data.context === "alarm";
+  }
+
+  if (moduleName === "sleep") {
+    return data.context === "sleep";
+  }
+
+  if (moduleName === "radio") {
+    return data.mode === "radio" && data.context !== "alarm" && data.context !== "sleep";
+  }
+
+  if (moduleName === "player") {
+    return ["youtube", "local"].includes(data.mode) && data.context !== "alarm" && data.context !== "sleep";
+  }
+
+  return false;
+}
+
+function setModuleWaveformVisible(visible) {
+  const waveform = document.getElementById("liveWaveform");
+  if (!waveform) return;
+
+  waveform.classList.toggle("hidden", !visible);
+}
+
+function updateModuleWaveformBars(level) {
+  const waveform = document.getElementById("liveWaveform");
+  if (!waveform) return;
+
+  const bars = waveform.querySelectorAll("i");
+  if (!bars.length) return;
+
+  const safeLevel = Math.max(0, Math.min(1, Number(level) || 0));
+
+  bars.forEach((bar, index) => {
+    const phase = Math.sin(Date.now() / 180 + index * 0.9);
+    const height = 22 + safeLevel * 46 + phase * safeLevel * 18;
+    bar.style.height = `${Math.max(12, Math.min(72, height))}%`;
+    bar.style.opacity = `${0.35 + safeLevel * 0.65}`;
+  });
+}
+
+async function pollModuleWaveform() {
+  const waveform = document.getElementById("liveWaveform");
+  if (!waveform) return;
+
+  try {
+    const statusRes = await fetch("/status", { cache: "no-store" });
+    const status = await statusRes.json();
+
+    const visible = playbackBelongsToCurrentModule(status);
+    setModuleWaveformVisible(visible);
+
+    if (!visible) return;
+
+    const waveformRes = await fetch("/waveform", { cache: "no-store" });
+    const waveformData = await waveformRes.json();
+
+    if (waveformData && waveformData.ok !== false) {
+      updateModuleWaveformBars(waveformData.level || 0.25);
+    } else {
+      updateModuleWaveformBars(0.18);
+    }
+  } catch (e) {
+    setModuleWaveformVisible(false);
+  }
+}
+
+if (document.getElementById("liveWaveform")) {
+  pollModuleWaveform();
+  setInterval(pollModuleWaveform, 750);
 }

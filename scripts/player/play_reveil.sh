@@ -326,6 +326,14 @@ log "Config: ENABLE_FADE=$ENABLE_FADE INITIAL_VOLUME=$INITIAL_VOLUME MAX_VOLUME=
 # ----------------------------------------------------------------------------
 if ! is_number "$INITIAL_VOLUME"; then INITIAL_VOLUME="10"; fi
 if ! is_number "$MAX_VOLUME"; then MAX_VOLUME="80"; fi
+if [ "$PLAYER_CONTEXT" = "sleep" ]; then
+  # Anti-veille = réveil inversé :
+  # départ au volume d'arrivée du réveil, puis fade out vers 0 via sleep_timer.sh.
+  log "Anti-veille : fade-in désactivé, volume de départ=${MAX_VOLUME}%"
+  ENABLE_FADE=0
+  INITIAL_VOLUME="$MAX_VOLUME"
+fi
+
 if ! is_number "$FADE_DURATION"; then FADE_DURATION="120"; fi
 if ! is_number "$FADE_STEPS"; then FADE_STEPS="80"; fi
 

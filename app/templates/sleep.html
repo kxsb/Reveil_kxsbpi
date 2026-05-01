@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Anti-veille Pi</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body class="page-module page-sleep">
+  <main class="app">
+
+    <header class="hero">
+      <a class="pill home-link" href="/">Accueil</a>
+    </header>
+
+    <section id="sleepDashboard" class="dashboard sleep-dashboard" tabindex="0" role="button" aria-label="Configurer l’anti-veille">
+      <p class="dashboard-label">Anti-veille programmée</p>
+
+      <div id="dashboardTime" class="dashboard-time" data-default="23:00">
+        23:00
+      </div>
+
+      <div class="alarm-summary-line sleep-summary-line">
+        <span id="sleepSourceBadge" class="alarm-source-badge">Aléatoire — Réveil</span>
+        <span id="dashboardSub" class="dashboard-sub">Dans --</span>
+      </div>
+
+      <div id="sleepInlineEditor" class="alarm-inline-editor sleep-inline-editor hidden">
+        <form id="sleepForm" class="sleep-form">
+          <div class="field-row">
+            <div>
+              <label>Heure</label>
+              <input id="sleepTime" type="time" name="time" value="23:00">
+            </div>
+
+            <div>
+              <label>Source</label>
+              <select id="sleepSource" name="source">
+                <optgroup id="sleepPlaylistOptions" label="Playlists locales">
+                  <option value="random">Aléatoire — Réveil</option>
+                  <option value="playlist">Playlist — Réveil</option>
+                </optgroup>
+                <optgroup id="sleepRadioOptions" label="Radios"></optgroup>
+              </select>
+            </div>
+          </div>
+
+          <input id="sleepDuration" type="hidden" name="duration" value="900">
+        </form>
+      </div>
+
+      <div id="liveWaveform" class="live-waveform hidden" aria-hidden="true">
+        <i></i><i></i><i></i><i></i><i></i>
+      </div>
+    </section>
+
+    <section class="settings-panel sleep-settings-panel">
+      <button id="sleepSettingsToggle" class="settings-toggle" type="button">
+        <span>🌙 Paramètres de l’anti-veille</span>
+        <span aria-hidden="true">▾</span>
+      </button>
+
+      <div id="sleepSettingsContent" class="sleep-settings-content hidden">
+        <label class="switch-row fade-switch sleep-fade-row">
+          <span class="switch-copy">
+            <strong>Fade out</strong>
+            <small>Descente progressive</small>
+          </span>
+          <input id="sleepFadeEnabled" class="switch-input" type="checkbox" name="fade_enabled" value="1" checked form="sleepForm">
+          <span class="switch-control" aria-hidden="true"></span>
+        </label>
+
+        <div id="sleepFadePanel" class="sleep-fade-panel">
+          <div class="sleep-control-block">
+            <span class="control-label">Durée de descente</span>
+
+            <div class="segmented-row sleep-duration-row">
+              <button class="sleep-duration-choice" type="button" data-duration="300">5 min</button>
+              <button class="sleep-duration-choice active" type="button" data-duration="900">15 min</button>
+              <button class="sleep-duration-choice" type="button" data-duration="1800">30 min</button>
+            </div>
+          </div>
+
+          <div class="sleep-curve-field">
+            <span class="control-label">Courbe de descente</span>
+            <input id="sleepFadeCurve" type="hidden" name="fade_curve" value="ease_out" form="sleepForm">
+
+            <div class="sleep-curve-grid" role="group" aria-label="Courbe de fade out">
+              <button class="sleep-curve-choice" type="button" data-curve="linear">
+                <svg viewBox="0 0 100 60" aria-hidden="true">
+                  <path d="M18 18 L82 46"></path>
+                </svg>
+                <strong>Linéaire</strong>
+              </button>
+
+              <button class="sleep-curve-choice" type="button" data-curve="ease_in">
+                <svg viewBox="0 0 100 60" aria-hidden="true">
+                  <path d="M18 18 C46 18 70 30 82 46"></path>
+                </svg>
+                <strong>Départ doux</strong>
+              </button>
+
+              <button class="sleep-curve-choice active" type="button" data-curve="ease_out">
+                <svg viewBox="0 0 100 60" aria-hidden="true">
+                  <path d="M18 18 C30 34 54 46 82 46"></path>
+                </svg>
+                <strong>Arrivée douce</strong>
+              </button>
+
+              <button class="sleep-curve-choice" type="button" data-curve="ease_in_out">
+                <svg viewBox="0 0 100 60" aria-hidden="true">
+                  <path d="M18 18 C34 18 42 46 82 46"></path>
+                </svg>
+                <strong>Progressive</strong>
+              </button>
+            </div>
+          </div>
+        </div>
+</div>
+    </section>
+
+    <section class="actions">
+      <form class="js-stop-form hidden" action="/stop" method="post">
+        <button class="action danger" type="submit">⏹ Stop</button>
+      </form>
+
+      <p id="actionStatus" class="small action-status"></p>
+    </section>
+
+    <footer class="footer-signature">
+      tu peux toujours rêver
+    </footer>
+
+  </main>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

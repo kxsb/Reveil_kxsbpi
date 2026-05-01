@@ -83,3 +83,10 @@ fi
 if [ "$CURRENT_TIME" != "$TARGET_TIME" ]; then
   rm -f "$LOCK_FILE"
 fi
+
+# Anti-veille programmée : utilise le même tick que le réveil.
+SLEEP_TICK="/home/kxsbpi/reveil/scripts/alarm/sleep_tick.sh"
+
+if [ -x "$SLEEP_TICK" ]; then
+  "$SLEEP_TICK"
+fi

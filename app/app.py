@@ -13,6 +13,7 @@ from services.paths import (
     PLAY_SCRIPT,
     PLAY_URL_SCRIPT,
     PLAY_FILE_SCRIPT,
+    SLEEP_TIMER_SCRIPT,
     UPDATE_SCRIPT,
     SYNC_PLAYLIST_SCRIPT,
     MUSIC_DIR,
@@ -45,6 +46,10 @@ from services.player_service import (
     read_waveform_state,
 )
 
+from services.sleep_service import (
+    sleep_status as get_sleep_status,
+    write_sleep_config,
+)
 from services.system_service import system_overview as get_system_overview
 from services.alarm_preset_service import (
     list_alarm_presets,
@@ -91,6 +96,16 @@ def config_page():
 @app.route("/player")
 def player_page():
     return render_template("player.html")
+
+
+@app.route("/sleep_status")
+def sleep_status():
+    return jsonify(get_sleep_status())
+
+
+@app.route("/sleep")
+def sleep_page():
+    return render_template("sleep.html")
 
 
 @app.route("/set_ajax", methods=["POST"])
@@ -410,6 +425,28 @@ def play_url():
     return jsonify({
         "ok": True,
         "message": "🎧 Lecture YouTube lancée",
+    })
+
+
+@app.route("/sleep_start", methods=["POST"])
+def sleep_start():
+    time_value = request.form.get("time", "").strip()
+    source = request.form.get("source", "random").strip()
+    fade_enabled = request.form.get("fade_enabled", "1").strip()
+    duration = request.form.get("duration", "900").strip()
+    curve = request.form.get("fade_curve", "ease_out").strip()
+
+    ok, message = write_sleep_config(
+        time_value=time_value,
+        source=source,
+        fade_enabled=fade_enabled,
+        duration=duration,
+        curve=curve,
+    )
+
+    return jsonify({
+        "ok": ok,
+        "message": "🌙 " + message if ok else message,
     })
 
 

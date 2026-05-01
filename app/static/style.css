@@ -2098,3 +2098,404 @@ footer {
     padding: 24px 22px 22px;
   }
 }
+
+/* =========================================================
+   UI SLEEP — anti-veille
+   ========================================================= */
+
+.page-sleep .sleep-form {
+  display: grid;
+  gap: 13px;
+  margin-top: 20px;
+  text-align: left;
+}
+
+.page-sleep .sleep-form label {
+  display: grid;
+  gap: 7px;
+  color: rgba(235,232,244,.72);
+  font-size: .8rem;
+}
+
+.page-sleep .sleep-form select {
+  min-height: 50px;
+  width: 100%;
+  padding: 0 13px;
+  font: inherit;
+}
+
+.page-sleep .sleep-options {
+  display: grid;
+  gap: 12px;
+}
+
+.page-sleep .sleep-fade-row {
+  margin-top: 2px;
+}
+
+.page-sleep .sleep-form .action {
+  margin-top: 6px;
+}
+
+@media (min-width: 560px) {
+  .page-sleep .sleep-options {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* =========================================================
+   UI SLEEP — courbes fade out visuelles
+   ========================================================= */
+
+.page-sleep .sleep-curve-field {
+  display: grid;
+  gap: 9px;
+}
+
+.page-sleep .sleep-curve-field > span {
+  color: rgba(235,232,244,.72);
+  font-size: .8rem;
+}
+
+.page-sleep .sleep-curve-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.page-sleep .sleep-curve-choice {
+  min-height: 86px;
+  border-radius: 17px;
+  border: 1px solid rgba(255,255,255,.09);
+  background: rgba(255,255,255,.055);
+  color: rgba(255,255,255,.92);
+  display: grid;
+  place-items: center;
+  gap: 3px;
+  padding: 10px;
+  cursor: pointer;
+  box-shadow:
+    0 8px 22px rgba(0,0,0,.10),
+    inset 0 1px 0 rgba(255,255,255,.04);
+}
+
+.page-sleep .sleep-curve-choice svg {
+  width: 78px;
+  height: 42px;
+  overflow: visible;
+}
+
+.page-sleep .sleep-curve-choice path {
+  fill: none;
+  stroke: rgba(255,255,255,.92);
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+
+.page-sleep .sleep-curve-choice strong {
+  font-size: .78rem;
+  font-weight: 800;
+}
+
+.page-sleep .sleep-curve-choice.active {
+  background:
+    linear-gradient(135deg, rgba(156,112,148,.72), rgba(156,112,148,.46));
+  border-color: rgba(255,255,255,.22);
+  box-shadow:
+    0 10px 26px rgba(0,0,0,.16),
+    inset 0 0 0 1px rgba(255,255,255,.06);
+}
+
+.page-sleep .sleep-curve-choice:hover {
+  border-color: rgba(255,255,255,.18);
+  background: rgba(255,255,255,.075);
+}
+
+.page-sleep .sleep-curve-choice.active:hover {
+  background:
+    linear-gradient(135deg, rgba(156,112,148,.78), rgba(156,112,148,.52));
+}
+
+/* =========================================================
+   UI SLEEP — anti-veille programmée
+   ========================================================= */
+
+.page-sleep .sleep-dashboard {
+  cursor: pointer;
+}
+
+.page-sleep .sleep-inline-editor {
+  margin-top: 22px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255,255,255,.075);
+  cursor: default;
+}
+
+.page-sleep .sleep-inline-editor.hidden {
+  display: none;
+}
+
+.page-sleep .sleep-form {
+  display: grid;
+  gap: 14px;
+  text-align: left;
+}
+
+.page-sleep .sleep-form label {
+  display: grid;
+  gap: 7px;
+  color: rgba(235,232,244,.72);
+  font-size: .8rem;
+}
+
+.page-sleep .sleep-form select {
+  min-height: 50px;
+  width: 100%;
+  padding: 0 13px;
+  font: inherit;
+}
+
+.page-sleep .sleep-fade-row {
+  margin-top: 2px;
+}
+
+.page-sleep .sleep-fade-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.page-sleep .sleep-fade-panel.hidden {
+  display: none;
+}
+
+.page-sleep .sleep-options {
+  display: grid;
+  gap: 12px;
+}
+
+.page-sleep .sleep-form .action {
+  margin-top: 4px;
+}
+
+.page-sleep .sleep-curve-field {
+  display: grid;
+  gap: 9px;
+}
+
+.page-sleep .sleep-curve-field > span {
+  color: rgba(235,232,244,.72);
+  font-size: .8rem;
+}
+
+.page-sleep .sleep-curve-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.page-sleep .sleep-curve-choice {
+  min-height: 86px;
+  border-radius: 17px;
+  border: 1px solid rgba(255,255,255,.09);
+  background: rgba(255,255,255,.055);
+  color: rgba(255,255,255,.92);
+  display: grid;
+  place-items: center;
+  gap: 3px;
+  padding: 10px;
+  cursor: pointer;
+  box-shadow:
+    0 8px 22px rgba(0,0,0,.10),
+    inset 0 1px 0 rgba(255,255,255,.04);
+}
+
+.page-sleep .sleep-curve-choice svg {
+  width: 78px;
+  height: 42px;
+  overflow: visible;
+}
+
+.page-sleep .sleep-curve-choice path {
+  fill: none;
+  stroke: rgba(255,255,255,.92);
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+
+.page-sleep .sleep-curve-choice strong {
+  font-size: .78rem;
+  font-weight: 800;
+}
+
+.page-sleep .sleep-curve-choice.active {
+  background:
+    linear-gradient(135deg, rgba(156,112,148,.72), rgba(156,112,148,.46));
+  border-color: rgba(255,255,255,.22);
+  box-shadow:
+    0 10px 26px rgba(0,0,0,.16),
+    inset 0 0 0 1px rgba(255,255,255,.06);
+}
+
+.page-sleep .sleep-curve-choice:hover {
+  border-color: rgba(255,255,255,.18);
+  background: rgba(255,255,255,.075);
+}
+
+.page-sleep .sleep-curve-choice.active:hover {
+  background:
+    linear-gradient(135deg, rgba(156,112,148,.78), rgba(156,112,148,.52));
+}
+
+@media (min-width: 560px) {
+  .page-sleep .sleep-options {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* =========================================================
+   UI SLEEP — alignement UX avec Réveil
+   ========================================================= */
+
+.page-sleep .sleep-dashboard {
+  cursor: pointer;
+}
+
+.page-sleep .sleep-inline-editor {
+  margin-top: 22px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255,255,255,.075);
+  cursor: default;
+}
+
+.page-sleep .sleep-inline-editor.hidden,
+.page-sleep .sleep-settings-content.hidden,
+.page-sleep .sleep-fade-panel.hidden {
+  display: none;
+}
+
+.page-sleep .sleep-settings-panel {
+  margin-top: 28px;
+}
+
+.page-sleep .sleep-settings-content {
+  margin-top: 16px;
+  padding: 0 16px 18px;
+  display: grid;
+  gap: 14px;
+}
+
+.page-sleep .sleep-form {
+  display: grid;
+  gap: 14px;
+  text-align: left;
+}
+
+.page-sleep .sleep-form label {
+  display: grid;
+  gap: 7px;
+  color: rgba(235,232,244,.72);
+  font-size: .8rem;
+}
+
+.page-sleep .sleep-form select {
+  min-height: 50px;
+  width: 100%;
+  padding: 0 13px;
+  font: inherit;
+}
+
+.page-sleep .sleep-fade-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.page-sleep .sleep-control-block,
+.page-sleep .sleep-curve-field {
+  display: grid;
+  gap: 9px;
+}
+
+.page-sleep .control-label {
+  color: rgba(235,232,244,.72);
+  font-size: .8rem;
+}
+
+.page-sleep .segmented-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.page-sleep .sleep-duration-choice {
+  min-height: 42px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 15px;
+  background: rgba(156,112,148,.22);
+  color: rgba(255,255,255,.94);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.page-sleep .sleep-duration-choice.active {
+  background: rgba(156,112,148,.72);
+  border-color: rgba(255,255,255,.20);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.05);
+}
+
+.page-sleep .sleep-curve-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.page-sleep .sleep-curve-choice {
+  min-height: 86px;
+  border-radius: 17px;
+  border: 1px solid rgba(255,255,255,.09);
+  background: rgba(255,255,255,.055);
+  color: rgba(255,255,255,.92);
+  display: grid;
+  place-items: center;
+  gap: 3px;
+  padding: 10px;
+  cursor: pointer;
+  box-shadow:
+    0 8px 22px rgba(0,0,0,.10),
+    inset 0 1px 0 rgba(255,255,255,.04);
+}
+
+.page-sleep .sleep-curve-choice svg {
+  width: 78px;
+  height: 42px;
+  overflow: visible;
+}
+
+.page-sleep .sleep-curve-choice path {
+  fill: none;
+  stroke: rgba(255,255,255,.92);
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+
+.page-sleep .sleep-curve-choice strong {
+  font-size: .78rem;
+  font-weight: 800;
+}
+
+.page-sleep .sleep-curve-choice.active {
+  background:
+    linear-gradient(135deg, rgba(156,112,148,.72), rgba(156,112,148,.46));
+  border-color: rgba(255,255,255,.22);
+  box-shadow:
+    0 10px 26px rgba(0,0,0,.16),
+    inset 0 0 0 1px rgba(255,255,255,.06);
+}
+
+.page-sleep #sleepSubmitButton {
+  margin-top: 4px;
+}
+
+/* Anti-veille : sauvegarde automatique, pas de bouton de validation */
+.page-sleep #sleepSubmitButton {
+  display: none;
+}

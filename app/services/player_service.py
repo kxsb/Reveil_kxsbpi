@@ -128,6 +128,32 @@ def cleanup_mpv_pid_file():
 
 
 
+
+def stop_sleep_timers():
+    """
+    Coupe les timers anti-veille encore actifs.
+
+    Sans ça, un ancien sleep_timer.sh peut continuer à envoyer des commandes
+    volume à /tmp/mpv_socket et baisser le son d'une nouvelle lecture.
+    """
+    patterns = [
+        "scripts/player/sleep_timer.sh",
+        "/home/kxsbpi/reveil/scripts/player/sleep_timer.sh",
+        "python3 - /tmp/mpv_socket",
+    ]
+
+    for pattern in patterns:
+        try:
+            subprocess.run(
+                ["/usr/bin/pkill", "-f", pattern],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
+        except Exception as e:
+            log(f"Erreur arrêt timer anti-veille pattern={pattern} : {e}")
+
+
 def stop_waveform_monitor():
     for pid_file in (WAVEFORM_MANAGER_PID_FILE, WAVEFORM_PID_FILE):
         if pid_file.exists():
@@ -165,6 +191,8 @@ def stop_mpv():
     4. fallback kill PID ;
     5. nettoyage waveform + état.
     """
+    stop_sleep_timers()
+
     pid = read_pid_file(MPV_PID_FILE)
 
     if pid is None:
