@@ -177,10 +177,6 @@ button:active {
   background: linear-gradient(135deg, #53629a, #454768);
 }
 
-.action.fip {
-  background: linear-gradient(135deg, var(--cyan), #455066);
-}
-
 .action.danger {
   background: linear-gradient(135deg, #bd3439, var(--danger));
 }
