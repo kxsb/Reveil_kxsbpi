@@ -1,6 +1,6 @@
 from flask import Flask, request, redirect, render_template, jsonify
 import subprocess
-from datetime import datetime, timedelta
+from datetime import datetime
 import re
 import json
 import time
@@ -24,6 +24,12 @@ from services.paths import (
 ensure_runtime_dirs()
 
 from services.settings_service import read_settings, write_settings
+from services.alarm_service import (
+    read_alarm,
+    write_alarm,
+    parse_alarm,
+    next_alarm_label,
+)
 
 ALLOWED_MODES = ["playlist", "radio", "random", "fip"]
 
@@ -34,29 +40,6 @@ def log(msg):
     LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
     with LOG_FILE.open("a", encoding="utf-8") as f:
         f.write(line)
-
-def read_alarm():
-    try:
-        if not REVEIL_FILE.exists():
-            return "non réglé"
-        return REVEIL_FILE.read_text(encoding="utf-8").strip() or "non réglé"
-    except Exception as e:
-        log(f"Erreur lecture réveil : {e}")
-        return "non réglé"
-
-def write_alarm(time_value, mode):
-    if not TIME_RE.match(time_value):
-        log(f"Heure invalide refusée : {time_value}")
-        return False
-
-    if mode not in ALLOWED_MODES:
-        log(f"Mode invalide remplacé par random : {mode}")
-        mode = "random"
-
-    REVEIL_FILE.parent.mkdir(parents=True, exist_ok=True)
-    REVEIL_FILE.write_text(f"{time_value} {mode}\n", encoding="utf-8")
-    log(f"Réveil réglé : {time_value} {mode}")
-    return True
 
 def read_radio_stations():
     try:
@@ -73,47 +56,6 @@ def read_radio_stations():
     except Exception as e:
         log(f"Erreur lecture radio_stations : {e}")
         return {}
-
-def parse_alarm():
-    raw = read_alarm()
-    parts = raw.split()
-
-    if len(parts) >= 2 and TIME_RE.match(parts[0]):
-        mode = parts[1] if parts[1] in ALLOWED_MODES else "random"
-        return parts[0], mode
-
-    if TIME_RE.match(raw):
-        return raw, "random"
-
-    return "", "random"
-
-def next_alarm_label():
-    alarm_time, alarm_mode = parse_alarm()
-
-    if not TIME_RE.match(alarm_time):
-        return "Aucun réveil programmé"
-
-    now = datetime.now()
-    hour, minute = map(int, alarm_time.split(":"))
-
-    target = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
-
-    if target <= now:
-        target += timedelta(days=1)
-
-    delta = target - now
-    total_minutes = int(delta.total_seconds() // 60)
-
-    hours = total_minutes // 60
-    minutes = total_minutes % 60
-
-    if hours == 0:
-        return f"Dans {minutes} min"
-
-    if minutes == 0:
-        return f"Dans {hours} h"
-
-    return f"Dans {hours} h {minutes} min"
 
 def run_process(args):
     log(f"Commande lancée : {' '.join(str(a) for a in args)}")
@@ -170,13 +112,6 @@ def set_alarm_ajax():
 def set_alarm():
     time_value = request.form.get("time", "").strip()
     mode = request.form.get("mode", "random").strip()
-
-    if not TIME_RE.match(time_value):
-        log(f"Heure invalide refusée : {time_value}")
-        return redirect("/")
-
-    if mode not in ALLOWED_MODES:
-        mode = "random"
 
     write_alarm(time_value, mode)
     return redirect("/")
