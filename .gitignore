@@ -19,3 +19,12 @@ __pycache__/
 
 # Local backups
 backups/
+
+# Ajout hardening runtime V2
+# Runtime local du réveil
+data/loudness_index.json
+config/reveil.conf
+config/reveil_settings.conf
+# OS / éditeurs
+Thumbs.db
+.vscode/

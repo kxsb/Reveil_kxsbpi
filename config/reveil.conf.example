@@ -1,0 +1,10 @@
+# Configuration du prochain réveil
+# Format :
+# HH:MM <mode> [station_id]
+#
+# Exemples :
+# 07:30 random
+# 07:30 playlist
+# 07:30 radio fip
+
+07:30 random

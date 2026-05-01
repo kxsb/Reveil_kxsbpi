@@ -1,0 +1,16 @@
+# Paramètres du réveil progressif
+
+# 1 = fade activé, 0 = fade désactivé
+ENABLE_FADE=1
+
+# Volume de départ en %
+INITIAL_VOLUME=10
+
+# Volume final en %
+MAX_VOLUME=80
+
+# Durée du fade en secondes
+FADE_DURATION=120
+
+# Courbe : linear, ease_in, ease_out, ease_in_out
+FADE_CURVE=ease_out
