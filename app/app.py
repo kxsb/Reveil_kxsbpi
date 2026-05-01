@@ -78,13 +78,6 @@ def set_alarm_ajax():
         "next_alarm": next_alarm_label(),
     })
 
-@app.route("/set", methods=["POST"])
-def set_alarm():
-    time_value = request.form.get("time", "").strip()
-    mode = request.form.get("mode", "random").strip()
-
-    write_alarm(time_value, mode)
-    return redirect("/")
 
 @app.route("/test", methods=["POST"])
 def test_sound():
@@ -117,9 +110,6 @@ def play_radio(station_id):
     return jsonify({"ok": True, "message": message})
 
 
-@app.route("/play_fip", methods=["POST"])
-def play_fip():
-    return play_radio("fip")
 
 @app.route("/stop", methods=["POST"])
 def stop():
