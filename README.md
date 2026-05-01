@@ -4,6 +4,7 @@ Interface locale de réveil, radio et lecteur audio pour Raspberry Pi, conçue c
 
 Le projet est pensé pour tourner en local sur un Raspberry Pi relié à une sortie audio de qualité, avec lecture via `mpv`, interface web Flask, déclenchement automatique via `cron`, fade-in configurable, playlist YouTube synchronisée en local, normalisation loudness et waveform audio dynamique.
 
+La V2 pose les fondations : une architecture lisible, des sous-applications, un moteur audio commun et une interface qui commence à parler le langage du son.
 ---
 
 ## Sommaire
@@ -825,10 +826,6 @@ La waveform est une représentation visuelle audio-réactive, pas un oscilloscop
 ---
 
 ## Philosophie
-
-Ce projet est un réveil, mais pas seulement. C’est une petite machine domestique de transition : entre sommeil et monde, silence et musique, automatisation et présence.
-
-La V2 pose les fondations : une architecture lisible, des sous-applications, un moteur audio commun et une interface qui commence à parler le langage du son.
 
 > tu peux toujours rêver
 
