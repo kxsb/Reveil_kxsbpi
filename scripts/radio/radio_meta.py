@@ -17,23 +17,37 @@ def radiofrance_livemeta(station_id, station):
     meta_station_id = station.get("meta_station_id")
     url = f"https://api.radiofrance.fr/livemeta/pull/{meta_station_id}"
 
-    with urllib.request.urlopen(url, timeout=5) as r:
-        data = json.load(r)
+    try:
+        with urllib.request.urlopen(url, timeout=5) as r:
+            data = json.load(r)
 
-    level = data["levels"][0]
-    uid = level["items"][level["position"]]
-    step = data["steps"][uid]
+        levels = data.get("levels") or []
+        if not levels:
+            return empty_meta(station_id, station)
 
-    return {
-        "ok": True,
-        "station_id": station_id,
-        "station_label": station.get("label", station_id),
-        "title": step.get("title", ""),
-        "artist": step.get("authors", ""),
-        "album": step.get("titreAlbum", ""),
-        "year": step.get("anneeEditionMusique", ""),
-        "visual": step.get("visual", ""),
-    }
+        level = levels[0]
+        items = level.get("items") or []
+        position = level.get("position", 0)
+
+        if not items:
+            return empty_meta(station_id, station)
+
+        uid = items[position]
+        step = (data.get("steps") or {}).get(uid) or {}
+
+        return {
+            "ok": True,
+            "station_id": station_id,
+            "station_label": station.get("label", station_id),
+            "title": step.get("title", ""),
+            "artist": step.get("authors", ""),
+            "album": step.get("titreAlbum", ""),
+            "year": step.get("anneeEditionMusique", ""),
+            "visual": step.get("visual", ""),
+        }
+
+    except Exception:
+        return empty_meta(station_id, station)
 
 def icy_meta(station_id, station):
     stream_url = station.get("stream_url")
@@ -79,46 +93,52 @@ def nts_meta(station_id, station):
     channel = "1" if station_id == "nts_1" else "2"
     url = f"https://api.ntslive.net/v2/live/{channel}"
 
-    with urllib.request.urlopen(url, timeout=5) as r:
-        data = json.load(r)
+    try:
+        with urllib.request.urlopen(url, timeout=5) as r:
+            data = json.load(r)
 
-    now = data.get("now", {})
-    title = now.get("broadcast_title") or ""
-    artist = now.get("embeds", [{}])[0].get("details", "") if now.get("embeds") else ""
+        now = data.get("now") or {}
+        title = now.get("broadcast_title") or ""
 
-    embeds = now.get("embeds") or []
-    if embeds:
-        artist = embeds[0].get("details", "") or ""
+        artist = ""
+        embeds = now.get("embeds") or []
+        if embeds:
+            artist = embeds[0].get("details", "") or ""
 
-    return {
-        "ok": True,
-        "station_id": station_id,
-        "station_label": station.get("label", station_id),
-        "title": title,
-        "artist": artist,
-        "album": "",
-        "year": "",
-        "visual": "",
-    }
+        return {
+            "ok": True,
+            "station_id": station_id,
+            "station_label": station.get("label", station_id),
+            "title": title,
+            "artist": artist,
+            "album": "",
+            "year": "",
+            "visual": "",
+        }
 
+    except Exception:
+        return empty_meta(station_id, station)
 
 def nova_meta(station_id, station):
     url = "https://www.nova.fr/radio/endpoint/currentTrack/"
 
-    with urllib.request.urlopen(url, timeout=5) as r:
-        data = json.load(r)
+    try:
+        with urllib.request.urlopen(url, timeout=5) as r:
+            data = json.load(r)
 
-    return {
-        "ok": True,
-        "station_id": station_id,
-        "station_label": station.get("label", station_id),
-        "title": data.get("title", ""),
-        "artist": data.get("artist", ""),
-        "album": "",
-        "year": "",
-        "visual": "",
-    }
+        return {
+            "ok": True,
+            "station_id": station_id,
+            "station_label": station.get("label", station_id),
+            "title": data.get("title", ""),
+            "artist": data.get("artist", ""),
+            "album": "",
+            "year": "",
+            "visual": "",
+        }
 
+    except Exception:
+        return empty_meta(station_id, station)
 
 def empty_meta(station_id, station):
     return {

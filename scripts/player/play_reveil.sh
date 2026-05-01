@@ -19,6 +19,7 @@ SETTINGS_FILE="$BASE/config/reveil_settings.conf"
 
 LOG_FILE="$BASE/logs/player.log"
 STATE_DIR="$BASE/state"
+MPV_PID_FILE="$STATE_DIR/mpv.pid"
 STATE_FILE="$STATE_DIR/player_state.json"
 WAVEFORM_FILE="$STATE_DIR/audio_waveform.json"
 WAVEFORM_PID_FILE="$STATE_DIR/audio_waveform.pid"
@@ -264,33 +265,36 @@ except Exception:
 PY
 }
 
-compute_volume() {
-  local i="$1"
-
-  python3 - "$INITIAL_VOLUME" "$MAX_VOLUME" "$FADE_STEPS" "$i" "$FADE_CURVE" <<'PY'
+compute_fade_volumes() {
+  python3 - "$INITIAL_VOLUME" "$MAX_VOLUME" "$FADE_STEPS" "$FADE_CURVE" <<'PYVOL'
 import sys
 
 start = float(sys.argv[1])
 end = float(sys.argv[2])
-steps = float(sys.argv[3])
-i = float(sys.argv[4])
-curve = sys.argv[5]
+steps = int(float(sys.argv[3]))
+curve = sys.argv[4]
 
-t = i / steps if steps else 1.0
-t = max(0.0, min(1.0, t))
+if steps < 1:
+    steps = 1
 
-if curve == "ease_in":
-    p = t ** 2
-elif curve == "ease_out":
-    p = 1 - ((1 - t) ** 2)
-elif curve == "ease_in_out":
-    p = 3 * (t ** 2) - 2 * (t ** 3)
-else:
-    p = t
+def curve_value(t):
+    t = max(0.0, min(1.0, t))
 
-vol = start + (end - start) * p
-print(round(vol))
-PY
+    if curve == "ease_in":
+        return t ** 2
+    if curve == "ease_out":
+        return 1 - ((1 - t) ** 2)
+    if curve == "ease_in_out":
+        return 3 * (t ** 2) - 2 * (t ** 3)
+
+    return t
+
+for i in range(steps + 1):
+    t = i / steps
+    p = curve_value(t)
+    vol = start + (end - start) * p
+    print(round(vol))
+PYVOL
 }
 
 send_mpv_volume() {
@@ -424,9 +428,12 @@ done
 # Lancement mpv
 # ----------------------------------------------------------------------------
 stop_waveform_monitor
+mkdir -p "$(dirname "$MPV_PID_FILE")"
+rm -f "$MPV_PID_FILE"
 
 "${MPV_CMD[@]}" >> "$LOG_FILE" 2>&1 &
 MPV_PID=$!
+echo "$MPV_PID" > "$MPV_PID_FILE"
 log "mpv lancé PID=$MPV_PID"
 
 sleep 2
@@ -449,6 +456,7 @@ if ! kill -0 "$MPV_PID" 2>/dev/null; then
 
     "${MPV_CMD[@]}" >> "$LOG_FILE" 2>&1 &
     MPV_PID=$!
+    echo "$MPV_PID" > "$MPV_PID_FILE"
     log "Fallback lancé : $FALLBACK_URL"
   else
     log "Aucun fallback disponible"
@@ -488,7 +496,13 @@ PY
 
   log "Fade activé : durée=${FADE_DURATION}s courbe=${FADE_CURVE} départ=${INITIAL_VOLUME}% max=${MAX_VOLUME}% step_sleep=${FADE_STEP_SLEEP}s"
 
-  for i in $(seq 0 "$FADE_STEPS"); do
+  mapfile -t FADE_VOLUMES < <(compute_fade_volumes)
+  log "Fade volumes pré-calculés : ${#FADE_VOLUMES[@]} point(s)"
+
+  FADE_INDEX=0
+  FADE_LAST_INDEX=$((${#FADE_VOLUMES[@]} - 1))
+
+  for VOL in "${FADE_VOLUMES[@]}"; do
     if ! kill -0 "$MPV_PID" 2>/dev/null; then
       log "mpv arrêté pendant le fade"
       write_state_stopped
@@ -501,9 +515,12 @@ PY
       exit 0
     fi
 
-    VOL="$(compute_volume "$i")"
-    log "fade volume -> $VOL"
+    if [ "$FADE_INDEX" -eq 0 ] || [ "$FADE_INDEX" -eq "$FADE_LAST_INDEX" ] || [ $((FADE_INDEX % 10)) -eq 0 ]; then
+      log "fade volume -> $VOL"
+    fi
+
     send_mpv_volume "$VOL"
+    FADE_INDEX=$((FADE_INDEX + 1))
     sleep "$FADE_STEP_SLEEP"
   done
 

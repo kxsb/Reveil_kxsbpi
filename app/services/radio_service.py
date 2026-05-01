@@ -1,7 +1,13 @@
 import json
 import re
+import time
 
 from services.paths import RADIO_STATIONS_FILE, RADIO_META_SCRIPT
+
+
+RADIO_NOW_CACHE = {}
+RADIO_NOW_TTL_OK = 15
+RADIO_NOW_TTL_ERROR = 30
 
 
 def sanitize_station_id(station_id):
@@ -56,16 +62,18 @@ def get_radio_label(station_id):
     return station.get("label", safe_station_id)
 
 
-def fetch_radio_now(station_id, timeout=5):
+def fetch_radio_now(station_id, timeout=3):
     """
     Récupère les métadonnées live d'une radio via scripts/radio_meta.py.
 
-    Retourne toujours un dictionnaire JSON-compatible.
-    """
-    import json
-    import subprocess
+    Cache léger en mémoire :
+    - succès : 15 s ;
+    - erreur : 30 s.
 
-    
+    Objectif : éviter de relancer un subprocess Python et une requête réseau
+    à chaque polling frontend, surtout quand une API radio est lente ou HS.
+    """
+    import subprocess
 
     safe_station_id = sanitize_station_id(station_id)
 
@@ -74,6 +82,20 @@ def fetch_radio_now(station_id, timeout=5):
             "ok": False,
             "error": "Station invalide",
         }
+
+    now = time.time()
+    cached = RADIO_NOW_CACHE.get(safe_station_id)
+
+    if cached:
+        data = cached.get("data", {})
+        ttl = RADIO_NOW_TTL_OK if data.get("ok") else RADIO_NOW_TTL_ERROR
+        age = now - float(cached.get("ts", 0))
+
+        if age < ttl:
+            out = dict(data)
+            out["cached"] = True
+            out["cache_age"] = round(age, 1)
+            return out
 
     try:
         proc = subprocess.run(
@@ -86,10 +108,21 @@ def fetch_radio_now(station_id, timeout=5):
         if proc.returncode != 0:
             raise RuntimeError(proc.stderr.strip() or "radio_meta.py failed")
 
-        return json.loads(proc.stdout)
+        data = json.loads(proc.stdout)
+
+        if not isinstance(data, dict):
+            raise RuntimeError("radio_meta.py returned non-object JSON")
 
     except Exception as e:
-        return {
+        data = {
             "ok": False,
             "error": str(e),
         }
+
+    RADIO_NOW_CACHE[safe_station_id] = {
+        "ts": now,
+        "data": data,
+    }
+
+    return data
+

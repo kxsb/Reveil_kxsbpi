@@ -361,10 +361,37 @@ document.addEventListener("DOMContentLoaded", () => {
   loadRadioStations();
 });
 
-async function updateStatus() {
+let lastRadioNowFetchAt = 0;
+
+function shouldFetchRadioNow(intervalMs = 15000) {
+  const now = Date.now();
+
+  if (now - lastRadioNowFetchAt < intervalMs) {
+    return false;
+  }
+
+  lastRadioNowFetchAt = now;
+  return true;
+}
+
+async function updateStatus(dataOverride = null) {
   try {
-    const res = await fetch("/status");
-    const data = await res.json();
+    let data = dataOverride;
+
+    if (!data) {
+      const res = await fetch("/status", { cache: "no-store" });
+      data = await res.json();
+    }
+
+    const hasDashboard =
+      fadeGraph &&
+      dashboardLabel &&
+      dashboardTime &&
+      dashboardSub;
+
+    if (!hasDashboard) {
+      return;
+    }
 
     if (data.status === "fading") {
       fadeGraph.classList.remove("hidden");
@@ -409,7 +436,7 @@ async function updateStatus() {
           dashboardSub.textContent = "Chargement du titre…";
         }
 
-        if (data.station_id) {
+        if (data.station_id && shouldFetchRadioNow()) {
           updateRadioNow(data.station_id);
         }
 
@@ -427,22 +454,6 @@ async function updateStatus() {
   }
 }
 
-setInterval(() => {
-  fetch("/status")
-    .then(res => res.json())
-    .then(data => {
-      if (data.status === "playing" && data.mode === "radio" && data.station_id) {
-        updateRadioNow(data.station_id);
-      }
-    })
-    .catch(() => {});
-}, 10000);
-
-refreshAlarmStatus();
-updateStatus();
-
-setInterval(refreshAlarmStatus, 60000);
-setInterval(updateStatus, 3000);
 // ===============================
 // UX multi-app : stop, waveform, source réveil
 // ===============================
@@ -524,19 +535,21 @@ function buildAlarmSourceOptions(stations) {
   });
 }
 
-// Surveille le statut pour l'accueil et les boutons Stop
-async function refreshPlaybackUx() {
+// Surveille le statut player avec un seul fetch partagé.
+async function playerTick() {
   try {
-    const res = await fetch("/status");
+    const res = await fetch("/status", { cache: "no-store" });
     const data = await res.json();
+
+    await updateStatus(data);
     updatePlaybackUx(data);
   } catch (e) {
-    console.error("playback ux error", e);
+    console.error("player tick error", e);
   }
 }
 
-refreshPlaybackUx();
-setInterval(refreshPlaybackUx, 3000);
+playerTick();
+setInterval(playerTick, 3000);
 
 // ===============================
 // Réveil : édition inline dans le dashboard
@@ -544,6 +557,9 @@ setInterval(refreshPlaybackUx, 3000);
 
 const alarmDashboard = document.getElementById("alarmDashboard");
 const alarmInlineEditor = document.getElementById("alarmInlineEditor");
+
+refreshAlarmStatus();
+setInterval(refreshAlarmStatus, 60000);
 
 function openAlarmEditor() {
   if (!alarmDashboard || !alarmInlineEditor) return;
@@ -966,7 +982,12 @@ async function pollPremiumWaveformLevel() {
   }
 }
 
-setInterval(pollPremiumWaveformLevel, 250);
+setInterval(() => {
+  if (!document.hidden) {
+    pollPremiumWaveformLevel();
+  }
+}, 750);
+
 pollPremiumWaveformLevel();
 requestAnimationFrame(animatePremiumWaveforms);
 

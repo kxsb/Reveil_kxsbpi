@@ -25,6 +25,8 @@ STATE_FILE = STATE_DIR / "player_state.json"
 WAVEFORM_FILE = STATE_DIR / "audio_waveform.json"
 WAVEFORM_PID_FILE = STATE_DIR / "audio_waveform.pid"
 WAVEFORM_MANAGER_PID_FILE = STATE_DIR / "audio_waveform_manager.pid"
+MPV_PID_FILE = STATE_DIR / "mpv.pid"
+MPV_SOCKET_FILE = Path("/tmp/mpv_socket")
 
 PLAY_SCRIPT = PLAYER_SCRIPTS_DIR / "play_reveil.sh"
 UPDATE_SCRIPT = PLAYLIST_SCRIPTS_DIR / "update_playlist.sh"
