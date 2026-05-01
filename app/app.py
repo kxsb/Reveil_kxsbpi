@@ -8,18 +8,21 @@ import time
 
 app = Flask(__name__, template_folder="templates", static_folder="static")
 
-HOME = Path("/home/kxsbpi/reveil")
+from services.paths import (
+    BASE_DIR,
+    REVEIL_FILE,
+    SETTINGS_FILE,
+    WEB_LOG_FILE as LOG_FILE,
+    SCRIPTS_DIR,
+    PLAY_SCRIPT,
+    TEST_SCRIPT,
+    UPDATE_SCRIPT,
+    STATE_FILE,
+    RADIO_STATIONS_FILE,
+    ensure_runtime_dirs,
+)
 
-REVEIL_FILE = HOME / "config/reveil.conf"
-SETTINGS_FILE = HOME / "config/reveil_settings.conf"
-LOG_FILE = HOME / "logs/web.log"
-SCRIPTS_DIR = HOME / "scripts"
-PLAY_SCRIPT = SCRIPTS_DIR / "play_reveil.sh"
-TEST_SCRIPT = SCRIPTS_DIR / "reveil_test.sh"
-
-STATE_FILE = HOME / "state/player_state.json"
-
-UPDATE_SCRIPT = SCRIPTS_DIR / "update_playlist.sh"
+ensure_runtime_dirs()
 
 ALLOWED_MODES = ["playlist", "radio", "random", "fip"]
 
@@ -84,13 +87,11 @@ def read_settings():
     return settings
 
 def read_radio_stations():
-    stations_file = HOME / "config/radio_stations.json"
-
     try:
-        if not stations_file.exists():
+        if not RADIO_STATIONS_FILE.exists():
             return {}
 
-        data = json.loads(stations_file.read_text(encoding="utf-8"))
+        data = json.loads(RADIO_STATIONS_FILE.read_text(encoding="utf-8"))
 
         if not isinstance(data, dict):
             return {}
@@ -161,7 +162,7 @@ def run_process(args):
     with LOG_FILE.open("a", encoding="utf-8") as log_handle:
         process = subprocess.Popen(
             [str(a) for a in args],
-            cwd=str(HOME),
+            cwd=str(BASE_DIR),
             stdout=log_handle,
             stderr=log_handle,
             start_new_session=True,
