@@ -29,6 +29,18 @@ function autosaveAlarm() {
 
       if (json.ok) {
         saveStatus.textContent = "✅ Réveil réglé : " + json.value;
+
+        if (json.next_alarm) {
+          if (heroNextAlarm) heroNextAlarm.textContent = json.next_alarm;
+          if (dashboardSub) {
+            dashboardSub.textContent = json.next_alarm;
+            dashboardSub.dataset.default = json.next_alarm;
+          }
+          if (dashboardTime) {
+            dashboardTime.textContent = json.value;
+            dashboardTime.dataset.default = json.value;
+          }
+        }
       } else {
         saveStatus.textContent = "⚠️ Réglage invalide";
       }
@@ -185,6 +197,7 @@ if (updatePlaylistButton && updatePlaylistStatus) {
   });
 }
 
+const heroNextAlarm = document.getElementById("heroNextAlarm");
 const dashboardLabel = document.getElementById("dashboardLabel");
 const dashboardTime = document.getElementById("dashboardTime");
 const dashboardSub = document.getElementById("dashboardSub");
@@ -211,6 +224,37 @@ function buildCurvePath(curve) {
   return path;
 }
 
+async function refreshAlarmStatus() {
+  try {
+    const res = await fetch("/alarm_status");
+    const data = await res.json();
+
+    if (!data.ok) return;
+
+    if (heroNextAlarm) {
+      heroNextAlarm.textContent = data.next_alarm;
+    }
+
+    if (dashboardTime) {
+      dashboardTime.dataset.default = data.current;
+    }
+
+    if (dashboardSub) {
+      dashboardSub.dataset.default = data.next_alarm;
+    }
+
+    if (alarmTime && data.alarm_time) {
+      alarmTime.value = data.alarm_time;
+    }
+
+    if (alarmMode && data.alarm_mode) {
+      alarmMode.value = data.alarm_mode;
+    }
+  } catch (e) {
+    console.error("alarm status error", e);
+  }
+}
+
 function resetDashboard() {
   if (!dashboardLabel || !dashboardTime || !dashboardSub || !fadeGraph) return;
 
@@ -220,6 +264,97 @@ function resetDashboard() {
   dashboardSub.textContent = dashboardSub.dataset.default || "";
 }
 
+const radioToggle = document.getElementById("radioToggle");
+const radioMenu = document.getElementById("radioMenu");
+
+if (radioToggle && radioMenu) {
+  radioToggle.addEventListener("click", () => {
+    radioMenu.classList.toggle("hidden");
+  });
+}
+
+async function updateRadioNow(stationId) {
+  try {
+    const res = await fetch(`/radio_now/${stationId}`);
+    const data = await res.json();
+
+    if (!dashboardSub) return;
+
+    if (!data.ok) {
+      dashboardSub.textContent = "Radio en direct";
+      return;
+    }
+
+    const title = data.title || "";
+    const artist = data.artist || "";
+
+    if (title && artist) {
+      dashboardSub.textContent = `${title} — ${artist}`;
+    } else if (title) {
+      dashboardSub.textContent = title;
+    } else {
+      dashboardSub.textContent = "Radio en direct";
+    }
+
+  } catch (e) {
+    console.error("radio_now error", e);
+    if (dashboardSub) dashboardSub.textContent = "Radio en direct";
+  }
+}
+
+async function loadRadioStations() {
+  try {
+    const res = await fetch("/radio_stations");
+    const data = await res.json();
+
+    if (!data.ok) return;
+
+    const stations = data.stations || {};
+    buildRadioMenu(stations);
+
+  } catch (e) {
+    console.error("radio_stations error", e);
+  }
+}
+
+function buildRadioMenu(stations) {
+  const radioMenu = document.getElementById("radioMenu");
+  if (!radioMenu) return;
+
+  radioMenu.innerHTML = "";
+
+  Object.entries(stations).forEach(([id, s]) => {
+    const btn = document.createElement("button");
+    btn.className = "radio-choice";
+    btn.type = "button";
+    btn.dataset.station = id;
+
+    btn.innerHTML = `
+      <span>${s.label}</span>
+      <small>${id}</small>
+    `;
+
+    btn.addEventListener("click", async () => {
+      radioMenu.classList.add("hidden");
+
+      if (actionStatus) {
+        actionStatus.textContent = "Commande envoyée…";
+      }
+
+      const res = await fetch(`/play_radio/${id}`, { method: "POST" });
+      const json = await res.json();
+
+      actionStatus.textContent = json.ok ? json.message : "⚠️ Erreur radio";
+    });
+
+    radioMenu.appendChild(btn);
+  });
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  loadRadioStations();
+});
+
 async function updateStatus() {
   try {
     const res = await fetch("/status");
@@ -228,8 +363,11 @@ async function updateStatus() {
     if (data.status === "fading") {
       fadeGraph.classList.remove("hidden");
 
+      const label = data.source_label || "Réveil";
+
       dashboardLabel.textContent = "🌅 Réveil en cours";
-      dashboardTime.textContent = "Fade in";
+      dashboardTime.textContent = label;
+      dashboardSub.textContent = "Montée progressive";
 
       const elapsed = data.now - data.started_at;
       const progress = Math.min(elapsed / data.fade_duration, 1);
@@ -250,9 +388,29 @@ async function updateStatus() {
 
     if (data.status === "playing") {
       fadeGraph.classList.add("hidden");
+
+      const label = data.source_label || "Lecture";
+
       dashboardLabel.textContent = "🎧 Lecture en cours";
-      dashboardTime.textContent = "Playlist";
-      dashboardSub.textContent = "Fade terminé";
+      dashboardTime.textContent = label;
+
+      if (data.mode === "radio") {
+        if (
+          dashboardSub.textContent === "" ||
+          dashboardSub.textContent === "Stream radio" ||
+          dashboardSub.textContent === "Chargement du titre…"
+        ) {
+          dashboardSub.textContent = "Chargement du titre…";
+        }
+
+        if (data.station_id) {
+          updateRadioNow(data.station_id);
+        }
+
+      } else {
+        dashboardSub.textContent = "Fade terminé";
+      }
+
       return;
     }
 
@@ -263,5 +421,19 @@ async function updateStatus() {
   }
 }
 
+setInterval(() => {
+  fetch("/status")
+    .then(res => res.json())
+    .then(data => {
+      if (data.status === "playing" && data.mode === "radio" && data.station_id) {
+        updateRadioNow(data.station_id);
+      }
+    })
+    .catch(() => {});
+}, 10000);
+
+refreshAlarmStatus();
 updateStatus();
-setInterval(updateStatus, 1500);
+
+setInterval(refreshAlarmStatus, 60000);
+setInterval(updateStatus, 3000);

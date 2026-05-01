@@ -1,0 +1,45 @@
+{
+  "fip": {
+    "label": "FIP",
+    "stream_url": "https://stream.radiofrance.fr/fip/fip_hifi.m3u8",
+    "fallback_url": "https://icecast.radiofrance.fr/fip-hifi.aac",
+    "meta_type": "radiofrance_livemeta",
+    "meta_station_id": 7
+  },
+  "nova": {
+    "label": "Radio Nova",
+    "stream_url": "http://radionova.ice.infomaniak.ch/radionova-256.aac",
+    "fallback_url": "http://radionova.ice.infomaniak.ch/radionova-high.mp3",
+    "meta_type": "none"
+  },
+  "nova_la_nuit": {
+    "label": "Nova La Nuit",
+    "stream_url": "http://novazz.ice.infomaniak.ch/novazz-128.mp3",
+    "fallback_url": "http://broadcast.infomaniak.ch/novazz-128.mp3",
+    "meta_type": "none"
+  },
+  "tsf_jazz": {
+    "label": "TSF Jazz",
+    "stream_url": "http://tsfjazz.ice.infomaniak.ch/tsfjazz-high.mp3",
+    "fallback_url": "http://broadcast.infomaniak.ch/tsfjazz-high.mp3",
+    "meta_type": "none"
+  },
+  "nts_1": {
+    "label": "NTS 1",
+    "stream_url": "https://stream-relay-geo.ntslive.net/stream",
+    "fallback_url": "https://stream-relay-geo.ntslive.net/stream",
+    "meta_type": "nts"
+  },
+  "nts_2": {
+    "label": "NTS 2",
+    "stream_url": "https://stream-relay-geo.ntslive.net/stream2",
+    "fallback_url": "https://stream-relay-geo.ntslive.net/stream2",
+    "meta_type": "nts"
+  },
+  "pulsar": {
+    "label": "Radio Pulsar",
+    "stream_url": "https://radiopulsar.ice.infomaniak.ch/radiopulsar-192.mp3",
+    "fallback_url": "https://radiopulsar.ice.infomaniak.ch/radiopulsar-192.mp3",
+    "meta_type": "icy"
+  }
+}

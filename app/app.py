@@ -1,7 +1,7 @@
 from flask import Flask, request, redirect, render_template, jsonify
 import subprocess
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 import re
 import json
 import time
@@ -21,22 +21,38 @@ STATE_FILE = HOME / "state/player_state.json"
 
 UPDATE_SCRIPT = SCRIPTS_DIR / "update_playlist.sh"
 
-ALLOWED_MODES = ["playlist", "fip", "random"]
+ALLOWED_MODES = ["playlist", "radio", "random", "fip"]
+
+TIME_RE = re.compile(r"^([01][0-9]|2[0-3]):[0-5][0-9]$")
 
 def log(msg):
     line = f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {msg}\n"
-    LOG_FILE.open("a", encoding="utf-8").write(line)
-
+    LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+    with LOG_FILE.open("a", encoding="utf-8") as f:
+        f.write(line)
 
 def read_alarm():
-    if not REVEIL_FILE.exists():
+    try:
+        if not REVEIL_FILE.exists():
+            return "non réglé"
+        return REVEIL_FILE.read_text(encoding="utf-8").strip() or "non réglé"
+    except Exception as e:
+        log(f"Erreur lecture réveil : {e}")
         return "non réglé"
-    return REVEIL_FILE.read_text(encoding="utf-8").strip() or "non réglé"
-
 
 def write_alarm(time_value, mode):
+    if not TIME_RE.match(time_value):
+        log(f"Heure invalide refusée : {time_value}")
+        return False
+
+    if mode not in ALLOWED_MODES:
+        log(f"Mode invalide remplacé par random : {mode}")
+        mode = "random"
+
+    REVEIL_FILE.parent.mkdir(parents=True, exist_ok=True)
     REVEIL_FILE.write_text(f"{time_value} {mode}\n", encoding="utf-8")
     log(f"Réveil réglé : {time_value} {mode}")
+    return True
 
 def read_settings():
     defaults = {
@@ -67,6 +83,23 @@ def read_settings():
 
     return settings
 
+def read_radio_stations():
+    stations_file = HOME / "config/radio_stations.json"
+
+    try:
+        if not stations_file.exists():
+            return {}
+
+        data = json.loads(stations_file.read_text(encoding="utf-8"))
+
+        if not isinstance(data, dict):
+            return {}
+
+        return data
+
+    except Exception as e:
+        log(f"Erreur lecture radio_stations : {e}")
+        return {}
 
 def write_settings(settings):
     content = "\n".join([
@@ -85,10 +118,11 @@ def parse_alarm():
     raw = read_alarm()
     parts = raw.split()
 
-    if len(parts) >= 2:
-        return parts[0], parts[1]
+    if len(parts) >= 2 and TIME_RE.match(parts[0]):
+        mode = parts[1] if parts[1] in ALLOWED_MODES else "random"
+        return parts[0], mode
 
-    if re.match(r"^[0-2][0-9]:[0-5][0-9]$", raw):
+    if TIME_RE.match(raw):
         return raw, "random"
 
     return "", "random"
@@ -96,7 +130,7 @@ def parse_alarm():
 def next_alarm_label():
     alarm_time, alarm_mode = parse_alarm()
 
-    if not re.match(r"^[0-2][0-9]:[0-5][0-9]$", alarm_time):
+    if not TIME_RE.match(alarm_time):
         return "Aucun réveil programmé"
 
     now = datetime.now()
@@ -105,7 +139,7 @@ def next_alarm_label():
     target = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
 
     if target <= now:
-        target = target.replace(day=target.day + 1)
+        target += timedelta(days=1)
 
     delta = target - now
     total_minutes = int(delta.total_seconds() // 60)
@@ -135,6 +169,15 @@ def run_process(args):
 
     log(f"PID lancé : {process.pid}")
 
+def is_mpv_running():
+    result = subprocess.run(
+        ["/usr/bin/pgrep", "-x", "mpv"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    )
+    return result.returncode == 0
+
 @app.route("/")
 def index():
     alarm_time, alarm_mode = parse_alarm()
@@ -154,17 +197,13 @@ def set_alarm_ajax():
     time_value = request.form.get("time", "").strip()
     mode = request.form.get("mode", "random").strip()
 
-    if not re.match(r"^[0-2][0-9]:[0-5][0-9]$", time_value):
+    if not write_alarm(time_value, mode):
         return jsonify({"ok": False})
-
-    if mode not in ALLOWED_MODES:
-        mode = "random"
-
-    write_alarm(time_value, mode)
 
     return jsonify({
         "ok": True,
-        "value": f"{time_value} {mode}"
+        "value": f"{time_value} {mode}",
+        "next_alarm": next_alarm_label(),
     })
 
 @app.route("/set", methods=["POST"])
@@ -172,7 +211,7 @@ def set_alarm():
     time_value = request.form.get("time", "").strip()
     mode = request.form.get("mode", "random").strip()
 
-    if not re.match(r"^[0-2][0-9]:[0-5][0-9]$", time_value):
+    if not TIME_RE.match(time_value):
         log(f"Heure invalide refusée : {time_value}")
         return redirect("/")
 
@@ -188,24 +227,38 @@ def test_sound():
     run_process(["/bin/bash", TEST_SCRIPT])
     return jsonify({"ok": True, "message": "🎧 Test sonore lancé"})
 
-
 @app.route("/play_playlist", methods=["POST"])
 def play_playlist():
     run_process(["/bin/bash", PLAY_SCRIPT])
     return jsonify({"ok": True, "message": "▶️ Playlist lancée"})
 
+@app.route("/play_radio/<station_id>", methods=["POST"])
+def play_radio(station_id):
+    safe_station_id = re.sub(r"[^a-zA-Z0-9_-]", "", station_id)
+
+    if not safe_station_id:
+        return jsonify({"ok": False, "message": "Station invalide"})
+
+    stations = read_radio_stations()
+
+    if safe_station_id not in stations:
+        return jsonify({"ok": False, "message": "Station inconnue"})
+
+    run_process(["/bin/bash", PLAY_SCRIPT, "radio", safe_station_id])
+
+    settings = read_settings()
+    label = stations[safe_station_id].get("label", safe_station_id)
+    message = f"📻 Radio lancée : {label}"
+
+    if settings.get("ENABLE_FADE") == "1":
+        message += " avec fade-in"
+
+    return jsonify({"ok": True, "message": message})
 
 
 @app.route("/play_fip", methods=["POST"])
 def play_fip():
-    run_process([
-        "/usr/bin/mpv",
-        "--no-video",
-        "--audio-device=alsa/plughw:CARD=Pro,DEV=0",
-        "https://icecast.radiofrance.fr/fip-midfi.mp3",
-    ])
-    return jsonify({"ok": True, "message": "📻 FIP lancé"})
-
+    return play_radio("fip")
 
 
 @app.route("/stop", methods=["POST"])
@@ -263,6 +316,18 @@ def settings_ajax():
         "settings": settings
     })
 
+@app.route("/alarm_status")
+def alarm_status():
+    alarm_time, alarm_mode = parse_alarm()
+
+    return jsonify({
+        "ok": True,
+        "current": read_alarm(),
+        "alarm_time": alarm_time,
+        "alarm_mode": alarm_mode,
+        "next_alarm": next_alarm_label(),
+    })
+
 @app.route("/status")
 def status():
     if not STATE_FILE.exists():
@@ -276,8 +341,49 @@ def status():
     except Exception:
         data = {"status": "unknown"}
 
+    if data.get("status") in ["playing", "fading"] and not is_mpv_running():
+        data = {"status": "stopped"}
+        STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+        STATE_FILE.write_text(json.dumps(data), encoding="utf-8")
+        log("État player corrigé : mpv absent, passage à stopped")
+
     data["now"] = int(time.time())
     return jsonify(data)
+
+@app.route("/radio_now/<station_id>")
+def radio_now(station_id):
+    safe_station_id = re.sub(r"[^a-zA-Z0-9_-]", "", station_id)
+
+    if not safe_station_id:
+        return jsonify({"ok": False, "error": "Station invalide"})
+
+    try:
+        proc = subprocess.run(
+            ["python3", str(SCRIPTS_DIR / "radio_meta.py"), safe_station_id],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+
+        if proc.returncode != 0:
+            raise Exception(proc.stderr)
+
+        data = json.loads(proc.stdout)
+        return jsonify(data)
+
+    except Exception as e:
+        log(f"Erreur radio_now : {e}")
+        return jsonify({
+            "ok": False,
+            "error": str(e),
+        })
+
+@app.route("/radio_stations")
+def radio_stations():
+    return jsonify({
+        "ok": True,
+        "stations": read_radio_stations(),
+    })
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8080)

@@ -323,3 +323,94 @@ footer {
 .fade-graph circle {
   fill: var(--main);
 }
+
+.radio-card {
+  background: linear-gradient(135deg, rgba(63,116,136,.35), rgba(37,37,54,.95));
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 14px;
+  margin: 6px 0;
+}
+
+.radio-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.radio-kicker {
+  margin: 0 0 3px;
+  color: var(--muted);
+  font-size: .78rem;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.radio-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  background: #61d394;
+  box-shadow: 0 0 18px rgba(97,211,148,.75);
+}
+
+.radio-select {
+  margin-bottom: 10px;
+  background: rgba(242,238,244,.96);
+}
+
+.radio-action {
+  background: linear-gradient(135deg, var(--cyan), #455066);
+}
+
+.radio-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.radio-main {
+  background: linear-gradient(135deg, var(--cyan), #455066);
+}
+
+.radio-inline {
+  background: rgba(255,255,255,.08);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 6px 8px;
+  color: white;
+  font-size: 0.85rem;
+}
+
+.radio-dropdown {
+  position: relative;
+}
+
+.radio-main {
+  background: linear-gradient(135deg, var(--cyan), #455066);
+}
+
+.radio-menu {
+  margin-top: 8px;
+  background: rgba(26,26,36,.98);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 8px;
+  box-shadow: 0 14px 35px rgba(0,0,0,.32);
+}
+
+.radio-choice {
+  background: rgba(255,255,255,.07);
+  text-align: left;
+  padding: 12px;
+}
+
+.radio-choice span {
+  display: block;
+  font-weight: 800;
+}
+
+.radio-choice small {
+  color: var(--muted);
+}

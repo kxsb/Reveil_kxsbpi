@@ -14,7 +14,7 @@
       <div>
         <p class="eyebrow">Réveil local</p>
         <h1>⏰ Réveil Pi</h1>
-        <p class="dashboard-sub">{{ next_alarm }}</p>
+        <p id="heroNextAlarm" class="dashboard-sub">{{ next_alarm }}</p>
       </div>
       <div class="pill">LAN</div>
     </header>
@@ -67,13 +67,19 @@
       </form>
 
       <div class="action-grid">
+        
         <form action="/play_playlist" method="post">
           <button class="action playlist" type="submit">▶️ Playlist</button>
         </form>
 
-        <form action="/play_fip" method="post">
-          <button class="action fip" type="submit">📻 FIP</button>
-        </form>
+        <div class="radio-dropdown">
+          <button id="radioToggle" class="action radio-main" type="button">
+            📻 Radio
+          </button>
+
+          <div id="radioMenu" class="radio-menu hidden"></div>
+        </div>
+
       </div>
 
       <form action="/stop" method="post">
