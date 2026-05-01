@@ -43,6 +43,8 @@ from services.player_service import (
     read_waveform_state,
 )
 
+from services.system_service import system_overview as get_system_overview
+
 
 @app.route("/")
 def index():
@@ -67,6 +69,11 @@ def alarm_page():
 @app.route("/radio")
 def radio_page():
     return render_template("radio.html")
+
+
+@app.route("/config")
+def config_page():
+    return render_template("config.html")
 
 
 @app.route("/player")
@@ -332,6 +339,11 @@ def radio_now(station_id):
 
     return jsonify(data)
 
+
+
+@app.route("/system_overview")
+def system_overview():
+    return jsonify(get_system_overview())
 
 
 @app.route("/waveform")

@@ -1204,3 +1204,80 @@ footer {
   border-color: rgba(255,255,255,.15);
   background: rgba(255,255,255,.075);
 }
+
+/* =========================================================
+   UI CONFIG PI — aperçu système
+   ========================================================= */
+
+.config-title {
+  font-size: 1.55rem;
+}
+
+.system-overview-button {
+  margin-top: 18px;
+  width: 100%;
+}
+
+.system-overview {
+  margin-top: 16px;
+}
+
+.system-overview.hidden {
+  display: none;
+}
+
+.metric-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.metric-card {
+  border: 1px solid rgba(255,255,255,.065);
+  border-radius: 16px;
+  background: rgba(255,255,255,.045);
+  padding: 12px 13px;
+}
+
+.metric-card p {
+  margin: 0 0 4px;
+  color: var(--muted);
+  opacity: .76;
+  font-size: .78rem;
+}
+
+.metric-card strong {
+  display: block;
+  color: var(--text);
+  font-size: 1.02rem;
+  line-height: 1.2;
+}
+
+.metric-card small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  opacity: .68;
+  font-size: .76rem;
+  line-height: 1.35;
+}
+
+.metric-bar {
+  margin-top: 9px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.08);
+  overflow: hidden;
+}
+
+.metric-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--main2), var(--main));
+}
+
+@media (min-width: 520px) {
+  .metric-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}

@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Config Pi</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+
+<body>
+  <main class="app">
+
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Config locale</p>
+        <h1>⚙️ Config Pi</h1>
+      </div>
+      <a class="pill home-link" href="/">Accueil</a>
+    </header>
+
+    <section class="dashboard config-dashboard">
+      <p class="dashboard-label">Système</p>
+
+      <div class="dashboard-time config-title">
+        Raspberry Pi
+      </div>
+
+      <p class="dashboard-sub">
+        État local
+      </p>
+
+      <button id="systemOverviewButton" class="action secondary-action system-overview-button" type="button">
+        Aperçu du système
+      </button>
+
+      <div id="systemOverviewPanel" class="system-overview hidden" aria-live="polite"></div>
+    </section>
+
+    <p id="actionStatus" class="small action-status"></p>
+
+    <footer class="footer-signature">
+      tu peux toujours rêver
+    </footer>
+
+  </main>
+
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

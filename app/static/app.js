@@ -1001,3 +1001,111 @@ if (musicLibraryToggle && musicLibraryList) {
     }
   });
 }
+
+
+// ===============================
+// Config Pi : aperçu système
+// ===============================
+
+const systemOverviewButton = document.getElementById("systemOverviewButton");
+const systemOverviewPanel = document.getElementById("systemOverviewPanel");
+
+function percentBar(percent) {
+  const value = Math.max(0, Math.min(100, Number(percent) || 0));
+  return `
+    <div class="metric-bar" aria-hidden="true">
+      <span style="width:${value}%"></span>
+    </div>
+  `;
+}
+
+function metricCard(label, value, sub, percent = null) {
+  return `
+    <article class="metric-card">
+      <p>${label}</p>
+      <strong>${value}</strong>
+      ${sub ? `<small>${sub}</small>` : ""}
+      ${percent !== null ? percentBar(percent) : ""}
+    </article>
+  `;
+}
+
+function renderSystemOverview(data) {
+  if (!systemOverviewPanel) return;
+
+  if (!data || !data.ok) {
+    systemOverviewPanel.innerHTML = `<p class="small">Impossible de lire l’état système.</p>`;
+    return;
+  }
+
+  const storage = data.storage || {};
+  const wifi = data.wifi || {};
+  const cpu = data.cpu || {};
+  const ram = data.ram || {};
+
+  const cpuValue =
+    cpu.percent === null || cpu.percent === undefined
+      ? "n/a"
+      : `${cpu.percent}%`;
+
+  const cpuSub =
+    cpu.temperature === null || cpu.temperature === undefined
+      ? ""
+      : `${cpu.temperature}°C`;
+
+  const ramValue =
+    ram.percent === null || ram.percent === undefined
+      ? "n/a"
+      : `${ram.percent}%`;
+
+  systemOverviewPanel.innerHTML = `
+    <div class="metric-grid">
+      ${metricCard(
+        "Stockage",
+        `${storage.percent || 0}%`,
+        `${storage.used_label || "?"} utilisés · ${storage.free_label || "?"} libres`,
+        storage.percent || 0
+      )}
+
+      ${metricCard(
+        "Wi-Fi",
+        wifi.quality || "indisponible",
+        wifi.signal_dbm ? `${wifi.signal_dbm} dBm · ${wifi.ssid || wifi.interface || ""}` : (wifi.message || wifi.interface || ""),
+        null
+      )}
+
+      ${metricCard(
+        "CPU",
+        cpuValue,
+        cpuSub,
+        cpu.percent
+      )}
+
+      ${metricCard(
+        "RAM",
+        ramValue,
+        `${ram.used_label || "?"} utilisés · ${ram.available_label || "?"} libres`,
+        ram.percent
+      )}
+    </div>
+  `;
+}
+
+async function loadSystemOverview() {
+  if (!systemOverviewPanel) return;
+
+  systemOverviewPanel.classList.remove("hidden");
+  systemOverviewPanel.innerHTML = `<p class="small">Lecture du système…</p>`;
+
+  try {
+    const res = await fetch("/system_overview", { cache: "no-store" });
+    const data = await res.json();
+    renderSystemOverview(data);
+  } catch (e) {
+    systemOverviewPanel.innerHTML = `<p class="small">Erreur de lecture système.</p>`;
+  }
+}
+
+if (systemOverviewButton && systemOverviewPanel) {
+  systemOverviewButton.addEventListener("click", loadSystemOverview);
+}
