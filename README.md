@@ -154,15 +154,6 @@ bash ~/reveil/scripts/update_playlist.sh
 
 ---
 
-## 🧪 Debug
-
-Logs utiles :
-
-```bash
-tail -f ~/reveil/logs/player.log
-tail -f ~/reveil/logs/cron.log
-```
-
 État courant :
 
 ```bash
@@ -174,27 +165,8 @@ cat ~/reveil/state/player_state.json
 ## 🔐 Remarques
 
 * conçu pour usage réseau local
-* pas d’authentification (à ajouter si exposition externe)
 * dépend de mpv + alsa
 
 ---
-
-## 🧬 Roadmap
-
-* [ ] authentification simple
-* [ ] presets réveil
-* [ ] animation volume live
-* [ ] dockerisation
-* [ ] intégration météo / agenda
-
----
-
-## ✨ Auteur
-
-Mickaël Medina / kxsb
-
----
-
-## 🌀 Philosophie
 
 tu peux toujours rêver
