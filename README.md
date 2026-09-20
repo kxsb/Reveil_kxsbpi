@@ -65,67 +65,15 @@ Ce projet transforme un Raspberry Pi en réveil autonome avec :
 ## 🧩 Architecture
 
 ```
-reveil/
-├── app/                # interface Flask
-│   ├── templates/
-│   ├── static/
-│   └── app.py
-│
-├── scripts/            # logique système
-│   ├── play_reveil.sh
-│   ├── alarm_tick.sh
-│   ├── update_playlist.sh
-│   └── analyze_loudness.py
-│
-├── config/
-│   ├── reveil.conf
-│   └── reveil_settings.conf
-│
-├── data/
-│   └── loudness_index.json
-│
-├── logs/
-├── state/
+à mettre à jour
 ```
 
 ---
 
 ## ⚙️ Installation
 
-### 1. Cloner le repo
-
-```bash
-git clone https://github.com/kxsb/Reveil_kxsbpi.git
-cd Reveil_kxsbpi
 ```
-
-### 2. Installer les dépendances
-
-```bash
-sudo apt update
-sudo apt install mpv socat python3 python3-pip -y
-pip3 install flask
-```
-
-Installer yt-dlp :
-
-```bash
-pip3 install --user yt-dlp
-```
-
----
-
-## ▶️ Lancer l’interface
-
-```bash
-cd ~/reveil/app
-python3 app.py
-```
-
-Puis accéder depuis un téléphone :
-
-```
-http://IP_DU_PI:8080
+à mettre à jour
 ```
 
 ---
@@ -148,18 +96,18 @@ crontab -e
 
 Via interface ou :
 
-```bash
-bash ~/reveil/scripts/update_playlist.sh
+```
+à mettre à jour
 ```
 
 ---
 
 État courant :
 
-```bash
-cat ~/reveil/state/player_state.json
-```
 
+```
+à mettre à jour
+```
 ---
 
 ## 🔐 Remarques
