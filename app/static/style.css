@@ -2499,3 +2499,205 @@ footer {
 .page-sleep #sleepSubmitButton {
   display: none;
 }
+
+
+/* =========================================================
+   PLAYERUI001 — lecteur unifié
+   ========================================================= */
+
+.page-player .player-mode-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255,255,255,.075);
+}
+
+.page-player .player-mode-choice {
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 14px;
+  background: rgba(255,255,255,.05);
+  color: var(--muted);
+  font-size: .88rem;
+  font-weight: 750;
+}
+
+.page-player .player-mode-choice.active {
+  background: rgba(138,95,130,.58);
+  border-color: rgba(255,255,255,.18);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
+}
+
+.page-player .player-mode-panel {
+  margin-top: 14px;
+}
+
+.page-player .player-mode-panel.hidden {
+  display: none;
+}
+
+.page-player .player-radio-menu {
+  margin-top: 0;
+  padding: 0;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+.page-player .player-radio-menu .radio-choice,
+.page-player .player-playlist-choice {
+  width: 100%;
+  min-height: 54px;
+  padding: 11px 13px;
+  border: 1px solid rgba(255,255,255,.065);
+  border-radius: 14px;
+  background: rgba(255,255,255,.045);
+  color: var(--text);
+  text-align: left;
+  display: grid;
+  gap: 3px;
+}
+
+.page-player .player-radio-menu .radio-choice + .radio-choice,
+.page-player .player-playlist-choice + .player-playlist-choice {
+  margin-top: 8px;
+}
+
+.page-player .player-radio-menu .radio-choice span,
+.page-player .player-playlist-choice span {
+  font-size: .94rem;
+  font-weight: 700;
+}
+
+.page-player .player-radio-menu .radio-choice small,
+.page-player .player-playlist-choice small {
+  color: var(--muted);
+  opacity: .62;
+  font-size: .73rem;
+}
+
+.page-player .player-radio-menu .radio-choice:hover,
+.page-player .player-playlist-choice:hover {
+  border-color: rgba(255,255,255,.15);
+  background: rgba(255,255,255,.075);
+}
+
+.page-player .player-playlist-list {
+  display: grid;
+  gap: 8px;
+}
+
+.page-player .player-url-form {
+  margin-top: 0;
+}
+
+@media (max-width: 420px) {
+  .page-player .player-mode-choice {
+    font-size: .78rem;
+    padding-left: 5px;
+    padding-right: 5px;
+  }
+}
+
+
+
+/* =========================================================
+   PLAYERUI002 — playlists locales détaillées
+   ========================================================= */
+
+.page-player .player-playlist-card {
+  display: grid;
+  gap: 8px;
+}
+
+.page-player .player-playlist-tracks {
+  display: grid;
+  gap: 7px;
+  padding: 8px 0 4px 12px;
+  border-left: 1px solid rgba(255,255,255,.08);
+}
+
+.page-player .player-playlist-tracks.hidden {
+  display: none;
+}
+
+.page-player .player-playlist-random,
+.page-player .player-track-choice {
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 13px;
+  background: rgba(255,255,255,.035);
+  color: var(--text);
+  text-align: left;
+  display: grid;
+  gap: 2px;
+}
+
+.page-player .player-playlist-random {
+  background: rgba(138,95,130,.18);
+  border-color: rgba(138,95,130,.32);
+}
+
+.page-player .player-playlist-random span,
+.page-player .player-track-choice span {
+  font-size: .88rem;
+  font-weight: 650;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.page-player .player-playlist-random small,
+.page-player .player-track-choice small {
+  color: var(--muted);
+  opacity: .62;
+  font-size: .71rem;
+}
+
+.page-player .player-playlist-random:hover,
+.page-player .player-track-choice:hover {
+  border-color: rgba(255,255,255,.14);
+  background: rgba(255,255,255,.065);
+}
+
+
+
+/* =========================================================
+   PLAYERUI003 — contrôles transport
+   ========================================================= */
+
+.page-player .player-transport {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.page-player .player-transport.hidden {
+  display: none;
+}
+
+.page-player .player-transport-button {
+  min-height: 48px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 15px;
+  background: rgba(255,255,255,.055);
+  color: var(--text);
+  font-size: 1.15rem;
+}
+
+.page-player .player-transport-button:hover {
+  border-color: rgba(255,255,255,.16);
+  background: rgba(255,255,255,.085);
+}
+
+.page-player .player-transport-button:disabled {
+  opacity: .5;
+  cursor: default;
+}

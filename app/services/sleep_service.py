@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from services.paths import SLEEP_FILE
 
 
-TIME_RE = re.compile(r"^[0-9]{2}:[0-9]{2}$")
+TIME_RE = re.compile(r"^([01][0-9]|2[0-3]):[0-5][0-9]$")
 SOURCE_RE = re.compile(r"^[a-zA-Z0-9_:-]+$")
 
 DEFAULT_SLEEP = {
@@ -16,7 +16,7 @@ DEFAULT_SLEEP = {
 }
 
 ALLOWED_CURVES = {"linear", "ease_in", "ease_out", "ease_in_out"}
-ALLOWED_DURATIONS = {"300", "900", "1800"}  # 5, 15, 30 min
+ALLOWED_DURATIONS = {"900", "2100", "3000"}  # 15, 35, 50 min
 
 
 def read_sleep_config():

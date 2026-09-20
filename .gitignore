@@ -30,3 +30,9 @@ Thumbs.db
 .vscode/
 config/playlists.json
 config/alarm_presets.json
+
+# Anti-veille runtime
+config/sleep.conf
+
+# Index loudness generes localement
+data/loudness_*.json

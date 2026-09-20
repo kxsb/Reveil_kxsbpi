@@ -21,42 +21,63 @@
     <section class="dashboard player-dashboard">
       <p class="dashboard-label" id="dashboardLabel">Lecture</p>
 
-      <div id="dashboardTime" class="dashboard-time" data-default="YouTube">
-        YouTube
+      <div id="dashboardTime" class="dashboard-time" data-default="Lecteur">
+        Lecteur
       </div>
 
-      <p id="dashboardSub" class="dashboard-sub" data-default="Colle une URL">
-        Colle une URL YouTube
+      <p id="dashboardSub" class="dashboard-sub" data-default="Choisis une source">
+        Choisis une source
       </p>
 
       <div id="liveWaveform" class="live-waveform hidden" aria-hidden="true">
         <i></i><i></i><i></i><i></i><i></i>
       </div>
 
-      <form id="playerUrlForm" class="player-url-form" data-player-url-form>
-        <input
-          id="playerUrlInput"
-          name="url"
-          type="url"
-          inputmode="url"
-          autocomplete="off"
-          placeholder="https://youtu.be/..."
-          required
-        >
-        <button class="action" type="submit">Lire</button>
-      </form>
-
-      <section class="music-library" aria-label="Dossier musique">
-        <button id="musicLibraryToggle" class="music-library-toggle" type="button">
-          <span>Dossier musique</span>
-          <small id="musicLibraryCount"></small>
+      <nav class="player-mode-tabs" aria-label="Mode de lecture">
+        <button class="player-mode-choice active" type="button" data-player-mode="youtube">
+          YouTube
         </button>
+        <button class="player-mode-choice" type="button" data-player-mode="radio">
+          Radio
+        </button>
+        <button class="player-mode-choice" type="button" data-player-mode="playlists">
+          Playlists
+        </button>
+      </nav>
 
-        <div id="musicLibraryList" class="music-library-list hidden"></div>
-      </section>
+      <div class="player-mode-panel" data-player-panel="youtube">
+        <form id="playerUrlForm" class="player-url-form" data-player-url-form>
+          <input
+            id="playerUrlInput"
+            name="url"
+            type="url"
+            inputmode="url"
+            autocomplete="off"
+            placeholder="https://youtu.be/..."
+            required
+          >
+          <button class="action" type="submit">Lire</button>
+        </form>
+      </div>
+
+      <div class="player-mode-panel hidden" data-player-panel="radio">
+        <div id="radioMenu" class="radio-menu player-radio-menu"></div>
+      </div>
+
+      <div class="player-mode-panel hidden" data-player-panel="playlists">
+        <div id="playerPlaylistList" class="player-playlist-list">
+          <p class="small">Chargement des playlists…</p>
+        </div>
+      </div>
     </section>
 
     <section class="actions">
+      <div id="playerTransportControls" class="player-transport hidden">
+        <button type="button" class="player-transport-button" data-player-command="previous" aria-label="Précédent">⏮</button>
+        <button type="button" class="player-transport-button" data-player-command="pause" aria-label="Pause / lecture">⏯</button>
+        <button type="button" class="player-transport-button" data-player-command="next" aria-label="Suivant">⏭</button>
+      </div>
+
       <form class="js-stop-form hidden" action="/stop" method="post">
         <button class="action danger" type="submit">⏹ Stop</button>
       </form>

@@ -3,7 +3,7 @@ import re
 from pathlib import Path
 from urllib.parse import urlparse
 
-from services.paths import PLAYLISTS_FILE, BASE_DIR
+from services.paths import PLAYLISTS_FILE, BASE_DIR, MUSIC_ROOT
 
 
 PLAYLIST_ID_RE = re.compile(r"^[a-z0-9_-]{2,40}$")
@@ -194,8 +194,14 @@ def list_playlist_files(playlist_id):
         except OSError:
             size = 0
 
+        try:
+            play_path = path.resolve().relative_to(MUSIC_ROOT.resolve()).as_posix()
+        except ValueError:
+            play_path = ""
+
         files.append({
             "path": rel,
+            "play_path": play_path,
             "label": label,
             "filename": path.name,
             "size": size,

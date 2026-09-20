@@ -89,14 +89,18 @@ def write_alarm(time_value, mode):
     REVEIL_FILE.parent.mkdir(parents=True, exist_ok=True)
 
     if station_id:
-        REVEIL_FILE.write_text(f"{time_value} {normalized_mode} {station_id}\n", encoding="utf-8")
-        _log(f"Réveil réglé : {time_value} {normalized_mode} {station_id}")
+        content = f"{time_value} {normalized_mode} {station_id}\n"
+        log_value = f"{time_value} {normalized_mode} {station_id}"
     else:
-        REVEIL_FILE.write_text(f"{time_value} {normalized_mode}\n", encoding="utf-8")
-        _log(f"Réveil réglé : {time_value} {normalized_mode}")
+        content = f"{time_value} {normalized_mode}\n"
+        log_value = f"{time_value} {normalized_mode}"
 
+    tmp = REVEIL_FILE.with_name(f".{REVEIL_FILE.name}.tmp")
+    tmp.write_text(content, encoding="utf-8")
+    tmp.replace(REVEIL_FILE)
+
+    _log(f"Réveil réglé : {log_value}")
     return True
-
 
 def parse_alarm():
     raw = read_alarm()
