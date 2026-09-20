@@ -86,8 +86,9 @@ Ajouter au cron :
 crontab -e
 ```
 
-```cron
-* * * * * /bin/bash ~/reveil/scripts/alarm_tick.sh >> ~/reveil/logs/cron.log 2>&1
+
+```
+à mettre à jour
 ```
 
 ---
