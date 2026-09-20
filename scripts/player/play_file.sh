@@ -139,7 +139,13 @@ fi
 
 log "Lecture fichier local demandée : $REL_PATH"
 
-rm -f "$SOCKET" "$MPV_PID_FILE"
+PLAYER_LOCK="/tmp/maison_sonore_player.lock"
+STOP_OWNED_SCRIPT="$BASE_DIR/scripts/player/stop_owned_mpv.sh"
+
+exec 9>"$PLAYER_LOCK"
+flock -x 9
+
+/bin/bash "$STOP_OWNED_SCRIPT"
 stop_waveform_monitor
 
 MPV_CMD=(
@@ -171,5 +177,7 @@ fi
 
 write_state_playing
 start_waveform_watcher
+
+flock -u 9
 
 log "Script play_file terminé"

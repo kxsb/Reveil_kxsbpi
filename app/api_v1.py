@@ -1,4 +1,5 @@
 import json
+import math
 import socket
 
 from flask import Blueprint, jsonify, request
@@ -16,12 +17,18 @@ from services.player_service import (
     send_mpv_command,
     stop_mpv,
     is_mpv_running,
+    mark_manual_volume_override,
+    clear_manual_volume_override,
 )
 from services.alarm_service import (
     read_alarm,
     write_alarm,
     parse_alarm,
     next_alarm_label,
+)
+from services.settings_service import (
+    read_settings,
+    write_settings,
 )
 from services.sleep_service import (
     sleep_status,
@@ -525,6 +532,83 @@ def api_player_stop():
     return ok(message="Lecture arrêtée")
 
 
+@api_v1.route("/player/volume", methods=["POST"])
+def api_player_volume():
+    data = input_data()
+
+    if not is_mpv_running():
+        return error(
+            "player_unavailable",
+            "Lecteur indisponible",
+            409,
+        )
+
+    runtime = player_runtime()
+    current = runtime.get("volume")
+
+    if current is None:
+        return error(
+            "player_not_ready",
+            "Volume du lecteur indisponible",
+            409,
+        )
+
+    try:
+        if "value" in data:
+            target = float(data.get("value"))
+
+        elif "delta" in data:
+            delta = float(data.get("delta"))
+
+            if abs(delta) > 25:
+                raise ValueError("delta trop grand")
+
+            target = float(current) + delta
+
+        else:
+            raise ValueError("volume absent")
+
+        if not math.isfinite(target):
+            raise ValueError("volume non fini")
+
+    except (TypeError, ValueError):
+        return error(
+            "invalid_volume",
+            "Volume invalide",
+            400,
+        )
+
+    target = max(0.0, min(100.0, target))
+
+    override_pid = mark_manual_volume_override()
+
+    if override_pid is None:
+        return error(
+            "player_unavailable",
+            "Lecteur indisponible",
+            409,
+        )
+
+    if not send_mpv_command([
+        "set_property",
+        "volume",
+        target,
+    ]):
+        clear_manual_volume_override(
+            expected_pid=override_pid
+        )
+
+        return error(
+            "player_unavailable",
+            "Impossible de modifier le volume",
+            409,
+        )
+
+    return ok({
+        "volume": round(target, 1),
+        "automatic_curve_cancelled": True,
+    })
+
 # ---------------------------------------------------------------------------
 # Radios
 # ---------------------------------------------------------------------------
@@ -593,6 +677,109 @@ def api_playlist_files(playlist_id):
 # Réveil
 # ---------------------------------------------------------------------------
 
+def public_alarm_settings():
+    settings = read_settings()
+
+    def safe_int(key, fallback):
+        try:
+            return int(settings.get(key, fallback))
+        except (TypeError, ValueError):
+            return fallback
+
+    curve = settings.get("FADE_CURVE", "linear")
+
+    if curve not in {
+        "linear",
+        "ease_in",
+        "ease_out",
+        "ease_in_out",
+    }:
+        curve = "linear"
+
+    return {
+        "fade_enabled":
+            settings.get("ENABLE_FADE", "1") == "1",
+        "initial_volume":
+            safe_int("INITIAL_VOLUME", 10),
+        "max_volume":
+            safe_int("MAX_VOLUME", 80),
+        "fade_duration":
+            safe_int("FADE_DURATION", 120),
+        "fade_curve":
+            curve,
+    }
+
+
+def normalize_alarm_settings(raw):
+    if not isinstance(raw, dict):
+        return None, "Paramètres de fondu invalides"
+
+    current = read_settings()
+
+    enabled_raw = raw.get(
+        "fade_enabled",
+        current.get("ENABLE_FADE", "1"),
+    )
+
+    if isinstance(enabled_raw, bool):
+        enabled = "1" if enabled_raw else "0"
+    else:
+        normalized = str(enabled_raw).strip().lower()
+
+        if normalized in {"1", "true", "yes", "on"}:
+            enabled = "1"
+        elif normalized in {"0", "false", "no", "off"}:
+            enabled = "0"
+        else:
+            return None, "Activation du fondu invalide"
+
+    try:
+        initial = int(
+            raw.get(
+                "initial_volume",
+                current.get("INITIAL_VOLUME", "10"),
+            )
+        )
+
+        duration = int(
+            raw.get(
+                "fade_duration",
+                current.get("FADE_DURATION", "120"),
+            )
+        )
+    except (TypeError, ValueError):
+        return None, "Paramètres numériques invalides"
+
+    curve = str(
+        raw.get(
+            "fade_curve",
+            current.get("FADE_CURVE", "linear"),
+        )
+    ).strip()
+
+    if initial not in {10, 20, 30}:
+        return None, "Volume initial invalide"
+
+    if duration not in {60, 120, 300}:
+        return None, "Durée du fondu invalide"
+
+    if curve not in {
+        "linear",
+        "ease_in",
+        "ease_out",
+        "ease_in_out",
+    }:
+        return None, "Courbe de fondu invalide"
+
+    return {
+        "ENABLE_FADE": enabled,
+        "INITIAL_VOLUME": str(initial),
+        "MAX_VOLUME": "80",
+        "FADE_DURATION": str(duration),
+        "FADE_CURVE": curve,
+    }, None
+
+
 @api_v1.route("/alarm")
 def api_alarm_get():
     alarm_time, alarm_mode = parse_alarm()
@@ -602,6 +789,7 @@ def api_alarm_get():
         "time": alarm_time,
         "mode": alarm_mode,
         "next_alarm": next_alarm_label(),
+        "settings": public_alarm_settings(),
     })
 
 
@@ -619,6 +807,20 @@ def api_alarm_put():
             400,
         )
 
+    settings_to_write = None
+
+    if "settings" in data:
+        settings_to_write, settings_error = (
+            normalize_alarm_settings(data.get("settings"))
+        )
+
+        if settings_error:
+            return error(
+                "invalid_alarm_settings",
+                settings_error,
+                400,
+            )
+
     if not write_alarm(time_value, mode):
         return error(
             "invalid_alarm",
@@ -626,12 +828,23 @@ def api_alarm_put():
             400,
         )
 
+    if settings_to_write is not None:
+        try:
+            write_settings(settings_to_write)
+        except Exception:
+            return error(
+                "alarm_settings_write_failed",
+                "Impossible d'enregistrer les paramètres du réveil",
+                500,
+            )
+
     alarm_time, alarm_mode = parse_alarm()
 
     return ok({
         "time": alarm_time,
         "mode": alarm_mode,
         "next_alarm": next_alarm_label(),
+        "settings": public_alarm_settings(),
     }, "Réveil enregistré")
 
 

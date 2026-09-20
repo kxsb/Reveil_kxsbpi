@@ -20,6 +20,7 @@ SETTINGS_FILE="$BASE/config/reveil_settings.conf"
 LOG_FILE="$BASE/logs/player.log"
 STATE_DIR="$BASE/state"
 MPV_PID_FILE="$STATE_DIR/mpv.pid"
+MANUAL_VOLUME_OVERRIDE_FILE="$STATE_DIR/manual_volume_override.pid"
 STATE_FILE="$STATE_DIR/player_state.json"
 WAVEFORM_FILE="$STATE_DIR/audio_waveform.json"
 WAVEFORM_PID_FILE="$STATE_DIR/audio_waveform.pid"
@@ -310,35 +311,15 @@ send_mpv_volume() {
 }
 
 # ----------------------------------------------------------------------------
-# Nettoyage préalable
+# Nettoyage préalable / verrou de lancement
 # ----------------------------------------------------------------------------
-# Arrêt ciblé de l'ancien mpv appartenant au réveil.
-if [ -f "$MPV_PID_FILE" ]; then
-    OLD_MPV_PID="$(cat "$MPV_PID_FILE" 2>/dev/null || true)"
+PLAYER_LOCK="/tmp/maison_sonore_player.lock"
+STOP_OWNED_SCRIPT="$BASE/scripts/player/stop_owned_mpv.sh"
 
-    if [ -n "$OLD_MPV_PID" ] && kill -0 "$OLD_MPV_PID" 2>/dev/null; then
-        OLD_CMD="$(tr '\0' ' ' < "/proc/$OLD_MPV_PID/cmdline" 2>/dev/null || true)"
+exec 9>"$PLAYER_LOCK"
+flock -x 9
 
-        if [[ "$OLD_CMD" == *"mpv"* ]] && [[ "$OLD_CMD" == *"--input-ipc-server=$SOCKET"* ]]; then
-            log "Arrêt ciblé ancien mpv PID=$OLD_MPV_PID"
-
-            if [ -S "$SOCKET" ]; then
-                printf '%s\n' '{"command":["quit"]}' | socat - "$SOCKET" >/dev/null 2>&1 || true
-            fi
-
-            for _ in $(seq 1 20); do
-                kill -0 "$OLD_MPV_PID" 2>/dev/null || break
-                sleep 0.1
-            done
-
-            if kill -0 "$OLD_MPV_PID" 2>/dev/null; then
-                kill "$OLD_MPV_PID" 2>/dev/null || true
-            fi
-        fi
-    fi
-fi
-
-rm -f "$SOCKET"
+/bin/bash "$STOP_OWNED_SCRIPT"
 
 echo "" >> "$LOG_FILE"
 log "=== lancement réveil ==="
@@ -615,6 +596,10 @@ log "Socket mpv OK : $SOCKET"
 
 start_waveform_watcher
 
+# Le nouveau MPV possède maintenant son PID et son socket.
+# Une autre commande de lecture peut donc prendre le verrou.
+flock -u 9
+
 # ----------------------------------------------------------------------------
 # Fade-in configurable
 # ----------------------------------------------------------------------------
@@ -635,6 +620,7 @@ PY
 
   FADE_INDEX=0
   FADE_LAST_INDEX=$((${#FADE_VOLUMES[@]} - 1))
+  FADE_CANCELLED=0
 
   for VOL in "${FADE_VOLUMES[@]}"; do
     if ! kill -0 "$MPV_PID" 2>/dev/null; then
@@ -649,6 +635,16 @@ PY
       exit 0
     fi
 
+    OVERRIDE_PID="$(
+      cat "$MANUAL_VOLUME_OVERRIDE_FILE" 2>/dev/null || true
+    )"
+
+    if [ "$OVERRIDE_PID" = "$MPV_PID" ]; then
+      log "Fade-in interrompu : volume modifié manuellement PID=$MPV_PID"
+      FADE_CANCELLED=1
+      break
+    fi
+
     if [ "$FADE_INDEX" -eq 0 ] || [ "$FADE_INDEX" -eq "$FADE_LAST_INDEX" ] || [ $((FADE_INDEX % 10)) -eq 0 ]; then
       log "fade volume -> $VOL"
     fi
@@ -659,7 +655,12 @@ PY
   done
 
 if kill -0 "$MPV_PID" 2>/dev/null; then
-  log "Fade-in terminé"
+  if [ "$FADE_CANCELLED" = "1" ]; then
+    log "Fade-in abandonné au profit du volume manuel"
+  else
+    log "Fade-in terminé"
+  fi
+
   write_state_playing "$STARTED_AT"
 else
   log "mpv déjà arrêté après fade"

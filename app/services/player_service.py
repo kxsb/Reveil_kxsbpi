@@ -8,6 +8,9 @@ from pathlib import Path
 from services.paths import BASE_DIR, WEB_LOG_FILE, STATE_FILE, WAVEFORM_FILE, WAVEFORM_PID_FILE, WAVEFORM_MANAGER_PID_FILE, MPV_PID_FILE, MPV_SOCKET_FILE
 
 
+MANUAL_VOLUME_OVERRIDE_FILE = BASE_DIR / "state" / "manual_volume_override.pid"
+
+
 def log(msg):
     line = f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] {msg}\n"
     WEB_LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
@@ -83,14 +86,144 @@ def is_process_alive(pid):
     return Path(f"/proc/{pid}").exists()
 
 
-def is_mpv_running():
-    pid = read_pid_file(MPV_PID_FILE)
-
-    if pid is None:
+def is_owned_mpv(pid):
+    if not pid or not is_process_alive(pid):
         return False
 
-    return is_process_alive(pid) and is_expected_process(pid, "mpv")
+    cmdline = process_cmdline(pid)
 
+    return (
+        "mpv" in cmdline
+        and f"--input-ipc-server={MPV_SOCKET_FILE}" in cmdline
+    )
+
+
+def find_owned_mpv_pids():
+    result = []
+
+    try:
+        entries = Path("/proc").iterdir()
+    except Exception:
+        return result
+
+    for entry in entries:
+        if not entry.name.isdigit():
+            continue
+
+        try:
+            pid = int(entry.name)
+        except ValueError:
+            continue
+
+        if is_owned_mpv(pid):
+            result.append(pid)
+
+    return sorted(result)
+
+
+def resolve_mpv_pid(repair=True):
+    pid = read_pid_file(MPV_PID_FILE)
+
+    if is_owned_mpv(pid):
+        return pid
+
+    candidates = find_owned_mpv_pids()
+
+    if len(candidates) != 1:
+        if len(candidates) > 1:
+            log(
+                "Ownership MPV ambigu : "
+                + ",".join(str(pid) for pid in candidates)
+            )
+
+        return None
+
+    recovered = candidates[0]
+
+    if repair:
+        MPV_PID_FILE.parent.mkdir(parents=True, exist_ok=True)
+
+        tmp = MPV_PID_FILE.with_name(
+            f".{MPV_PID_FILE.name}.tmp"
+        )
+
+        tmp.write_text(
+            f"{recovered}\n",
+            encoding="utf-8",
+        )
+
+        tmp.replace(MPV_PID_FILE)
+
+        log(
+            f"Ownership MPV récupéré automatiquement PID={recovered}"
+        )
+
+    return recovered
+
+
+def is_mpv_running():
+    return resolve_mpv_pid(repair=True) is not None
+
+
+
+def mark_manual_volume_override():
+    """
+    Marque le volume du MPV courant comme piloté manuellement.
+
+    Le marqueur contient le PID pour qu'une ancienne intervention
+    manuelle ne puisse jamais affecter une lecture suivante.
+    """
+    pid = resolve_mpv_pid(repair=True)
+
+    if pid is None:
+        return None
+
+    MANUAL_VOLUME_OVERRIDE_FILE.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    tmp = MANUAL_VOLUME_OVERRIDE_FILE.with_name(
+        f".{MANUAL_VOLUME_OVERRIDE_FILE.name}.tmp"
+    )
+
+    tmp.write_text(
+        f"{pid}\n",
+        encoding="utf-8",
+    )
+
+    tmp.replace(MANUAL_VOLUME_OVERRIDE_FILE)
+
+    log(f"Volume manuel : override automatique PID={pid}")
+
+    return pid
+
+
+def clear_manual_volume_override(expected_pid=None):
+    """
+    Supprime l'override manuel.
+
+    Si expected_pid est fourni, ne supprime jamais un marqueur
+    appartenant déjà à un nouveau lecteur.
+    """
+    try:
+        if not MANUAL_VOLUME_OVERRIDE_FILE.exists():
+            return
+
+        if expected_pid is not None:
+            raw = MANUAL_VOLUME_OVERRIDE_FILE.read_text(
+                encoding="utf-8"
+            ).strip()
+
+            if raw != str(expected_pid):
+                return
+
+        MANUAL_VOLUME_OVERRIDE_FILE.unlink()
+
+    except FileNotFoundError:
+        pass
+    except Exception as e:
+        log(f"Erreur nettoyage override volume : {e}")
 
 def send_mpv_command(command):
     if not MPV_SOCKET_FILE.exists():
@@ -220,12 +353,10 @@ def stop_mpv():
     """
     stop_sleep_timers()
 
-    pid = read_pid_file(MPV_PID_FILE)
+    pid = resolve_mpv_pid(repair=True)
 
     if pid is None:
-        log("Stop demandé : aucun MPV_PID_FILE, aucun mpv ciblé")
-    elif not is_expected_process(pid, "mpv"):
-        log(f"Stop demandé : PID {pid} ignoré, ce n'est pas un processus mpv attendu")
+        log("Stop demandé : aucun MPV Maison Sonore détecté")
         cleanup_mpv_pid_file()
     else:
         log(f"Stop ciblé mpv PID={pid}")
@@ -254,6 +385,11 @@ def stop_mpv():
             wait_process_exit(pid, timeout=1.0)
 
         cleanup_mpv_pid_file()
+
+    if pid is None:
+        clear_manual_volume_override()
+    else:
+        clear_manual_volume_override(expected_pid=pid)
 
     stop_waveform_monitor()
     write_player_state({"status": "stopped"})
