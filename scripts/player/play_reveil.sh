@@ -32,6 +32,7 @@ SOCKET="/tmp/mpv_socket"
 MODE="${1:-playlist}"
 SOURCE_ID="${2:-reveil}"
 PLAYER_CONTEXT="${3:-alarm}"
+START_TRACK="${4:-}"
 RADIO_STATIONS_FILE="$BASE/config/radio_stations.json"
 PLAYLISTS_FILE="$BASE/config/playlists.json"
 
@@ -311,7 +312,32 @@ send_mpv_volume() {
 # ----------------------------------------------------------------------------
 # Nettoyage préalable
 # ----------------------------------------------------------------------------
-/usr/bin/pkill -x mpv 2>/dev/null || true
+# Arrêt ciblé de l'ancien mpv appartenant au réveil.
+if [ -f "$MPV_PID_FILE" ]; then
+    OLD_MPV_PID="$(cat "$MPV_PID_FILE" 2>/dev/null || true)"
+
+    if [ -n "$OLD_MPV_PID" ] && kill -0 "$OLD_MPV_PID" 2>/dev/null; then
+        OLD_CMD="$(tr '\0' ' ' < "/proc/$OLD_MPV_PID/cmdline" 2>/dev/null || true)"
+
+        if [[ "$OLD_CMD" == *"mpv"* ]] && [[ "$OLD_CMD" == *"--input-ipc-server=$SOCKET"* ]]; then
+            log "Arrêt ciblé ancien mpv PID=$OLD_MPV_PID"
+
+            if [ -S "$SOCKET" ]; then
+                printf '%s\n' '{"command":["quit"]}' | socat - "$SOCKET" >/dev/null 2>&1 || true
+            fi
+
+            for _ in $(seq 1 20); do
+                kill -0 "$OLD_MPV_PID" 2>/dev/null || break
+                sleep 0.1
+            done
+
+            if kill -0 "$OLD_MPV_PID" 2>/dev/null; then
+                kill "$OLD_MPV_PID" 2>/dev/null || true
+            fi
+        fi
+    fi
+fi
+
 rm -f "$SOCKET"
 
 echo "" >> "$LOG_FILE"
@@ -447,6 +473,37 @@ else
   if [ "$MODE" = "random" ]; then
     log "Mode random : mélange de la playlist id=${PLAYLIST_ID:-reveil}"
     mapfile -d '' TRACKS < <(printf '%s\0' "${TRACKS[@]}" | shuf -z)
+  elif [ -n "$START_TRACK" ]; then
+    START_INDEX=-1
+
+    for i in "${!TRACKS[@]}"; do
+      REL_TRACK="${TRACKS[$i]#$MUSIC_DIR/}"
+
+      if [ "$REL_TRACK" = "$START_TRACK" ]; then
+        START_INDEX="$i"
+        break
+      fi
+    done
+
+    if [ "$START_INDEX" -lt 0 ]; then
+      log "ERREUR: piste de départ introuvable : $START_TRACK"
+      exit 1
+    fi
+
+    ORIGINAL_TRACKS=("${TRACKS[@]}")
+    TRACKS=()
+
+    # Ordre circulaire :
+    # morceau choisi -> suivants -> début de playlist -> morceau précédent.
+    for ((i=START_INDEX; i<${#ORIGINAL_TRACKS[@]}; i++)); do
+      TRACKS+=("${ORIGINAL_TRACKS[$i]}")
+    done
+
+    for ((i=0; i<START_INDEX; i++)); do
+      TRACKS+=("${ORIGINAL_TRACKS[$i]}")
+    done
+
+    log "Playlist positionnée sur : $START_TRACK"
   fi
 
   log "Playlist détectée id=${PLAYLIST_ID:-reveil} : ${#TRACKS[@]} piste(s)"
@@ -472,6 +529,10 @@ MPV_CMD=(
   --volume="$START_VOLUME"
   --input-ipc-server="$SOCKET"
 )
+
+if [ -n "$START_TRACK" ] && [ "$MODE" != "radio" ]; then
+  MPV_CMD+=(--loop-playlist=inf)
+fi
 
 for TRACK in "${TRACKS[@]}"; do
   MPV_CMD+=(--{)
@@ -607,6 +668,30 @@ fi
 else
   write_state_playing "$STARTED_AT"
   log "Fade désactivé"
+fi
+
+# Rester propriétaire du cycle de vie de ce mpv.
+MPV_EXIT_CODE=0
+wait "$MPV_PID" || MPV_EXIT_CODE=$?
+
+log "mpv terminé PID=$MPV_PID rc=$MPV_EXIT_CODE"
+
+CURRENT_MPV_PID="$(cat "$MPV_PID_FILE" 2>/dev/null || true)"
+
+# Ne nettoyer que si aucune nouvelle lecture n'a remplacé celle-ci.
+if [ "$CURRENT_MPV_PID" = "$MPV_PID" ]; then
+    log "Nettoyage fin naturelle PID=$MPV_PID"
+
+    stop_waveform_monitor
+
+    rm -f "$MPV_PID_FILE"
+
+    # Le socket Unix peut subsister après la mort de mpv.
+    rm -f "$SOCKET"
+
+    write_state_stopped
+else
+    log "Ancienne lecture terminée : player déjà remplacé par PID=${CURRENT_MPV_PID:-none}"
 fi
 
 log "Script play_reveil terminé"

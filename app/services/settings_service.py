@@ -52,4 +52,6 @@ def write_settings(settings):
         "",
     ])
 
-    SETTINGS_FILE.write_text(content, encoding="utf-8")
+    tmp = SETTINGS_FILE.with_name(f".{SETTINGS_FILE.name}.tmp")
+    tmp.write_text(content, encoding="utf-8")
+    tmp.replace(SETTINGS_FILE)

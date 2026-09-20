@@ -42,6 +42,7 @@ from services.player_service import (
     log,
     run_process,
     stop_mpv,
+    send_mpv_command,
     read_player_state,
     read_waveform_state,
 )
@@ -85,7 +86,8 @@ def alarm_page():
 
 @app.route("/radio")
 def radio_page():
-    return render_template("radio.html")
+    # Compatibilité avec les anciens favoris / liens.
+    return redirect("/player")
 
 
 @app.route("/config")
@@ -178,8 +180,78 @@ def test_sound():
 
 @app.route("/play_playlist", methods=["POST"])
 def play_playlist():
-    run_process(["/bin/bash", PLAY_SCRIPT])
-    return jsonify({"ok": True, "message": "▶️ Playlist lancée"})
+    playlist_id = request.form.get("playlist_id", "reveil").strip()
+    play_mode = request.form.get("mode", "playlist").strip()
+    start_file = request.form.get("start_file", "").strip()
+
+    if play_mode not in ["playlist", "random"]:
+        return jsonify({
+            "ok": False,
+            "message": "Mode de lecture invalide",
+        })
+
+    playlists = {
+        item.get("id"): item
+        for item in list_playlists()
+        if item.get("id")
+    }
+
+    if playlist_id not in playlists:
+        return jsonify({
+            "ok": False,
+            "message": "Playlist inconnue",
+        })
+
+    if start_file:
+        playlist_files, error = list_playlist_files(playlist_id)
+
+        if error or not playlist_files:
+            return jsonify({
+                "ok": False,
+                "message": "Impossible de lire la playlist",
+            })
+
+        allowed_files = {
+            item.get("path")
+            for item in playlist_files.get("files", [])
+            if item.get("path")
+        }
+
+        if start_file not in allowed_files:
+            return jsonify({
+                "ok": False,
+                "message": "Morceau inconnu dans cette playlist",
+            })
+
+    try:
+        stop_mpv()
+    except Exception as e:
+        log(f"Erreur stop avant playlist : {e}")
+
+    command = [
+        "/bin/bash",
+        PLAY_SCRIPT,
+        play_mode,
+        playlist_id,
+        "manual",
+    ]
+
+    if start_file:
+        command.append(start_file)
+
+    run_process(command)
+
+    label = playlists[playlist_id].get("label", playlist_id)
+
+    if play_mode == "random":
+        message = f"🔀 Lecture aléatoire : {label}"
+    else:
+        message = f"▶️ Playlist lancée : {label}"
+
+    return jsonify({
+        "ok": True,
+        "message": message,
+    })
 
 @app.route("/play_radio/<station_id>", methods=["POST"])
 def play_radio(station_id):
@@ -447,6 +519,40 @@ def sleep_start():
     return jsonify({
         "ok": ok,
         "message": "🌙 " + message if ok else message,
+    })
+
+
+@app.route("/player_command/<command>", methods=["POST"])
+def player_command(command):
+    commands = {
+        "pause": ["cycle", "pause"],
+        "next": ["playlist-next", "force"],
+        "previous": ["playlist-prev", "force"],
+    }
+
+    mpv_command = commands.get(command)
+
+    if not mpv_command:
+        return jsonify({
+            "ok": False,
+            "message": "Commande lecteur inconnue",
+        })
+
+    if not send_mpv_command(mpv_command):
+        return jsonify({
+            "ok": False,
+            "message": "Lecteur indisponible",
+        })
+
+    labels = {
+        "pause": "⏯ Pause / lecture",
+        "next": "⏭ Morceau suivant",
+        "previous": "⏮ Morceau précédent",
+    }
+
+    return jsonify({
+        "ok": True,
+        "message": labels[command],
     })
 
 

@@ -92,6 +92,33 @@ def is_mpv_running():
     return is_process_alive(pid) and is_expected_process(pid, "mpv")
 
 
+def send_mpv_command(command):
+    if not MPV_SOCKET_FILE.exists():
+        return False
+
+    try:
+        payload = json.dumps({"command": command}) + "\n"
+
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
+            sock.settimeout(0.8)
+            sock.connect(str(MPV_SOCKET_FILE))
+            sock.sendall(payload.encode("utf-8"))
+
+            try:
+                response = sock.recv(4096)
+                if response:
+                    data = json.loads(response.decode("utf-8").strip())
+                    return data.get("error") == "success"
+            except socket.timeout:
+                pass
+
+        return True
+
+    except Exception as e:
+        log(f"Commande mpv impossible {command}: {e}")
+        return False
+
+
 def send_mpv_quit():
     if not MPV_SOCKET_FILE.exists():
         return False

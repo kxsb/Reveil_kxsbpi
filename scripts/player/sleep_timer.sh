@@ -15,6 +15,7 @@ TOTAL_SECONDS="${1:-1800}"
 FADE_ENABLED="${2:-1}"
 FADE_DURATION="${3:-120}"
 FADE_CURVE="${4:-ease_out}"
+EXPECTED_MPV_PID="${5:-}"
 
 mkdir -p "$STATE_DIR" "$LOG_DIR"
 
@@ -53,9 +54,22 @@ else
   WAIT_SECONDS="$TOTAL_SECONDS"
 fi
 
-log "Anti-veille armée : total=${TOTAL_SECONDS}s fade=${FADE_ENABLED} fade_duration=${FADE_DURATION}s curve=${FADE_CURVE}"
+log "Anti-veille armée : total=${TOTAL_SECONDS}s fade=${FADE_ENABLED} fade_duration=${FADE_DURATION}s curve=${FADE_CURVE} mpv=${EXPECTED_MPV_PID:-none}"
 
 sleep "$WAIT_SECONDS"
+
+# Le timer ne doit agir que sur le mpv pour lequel il a été créé.
+CURRENT_MPV_PID="$(cat "$MPV_PID_FILE" 2>/dev/null || true)"
+
+if [ -z "$EXPECTED_MPV_PID" ] || [ "$CURRENT_MPV_PID" != "$EXPECTED_MPV_PID" ]; then
+    log "Anti-veille annulée : player remplacé (attendu=${EXPECTED_MPV_PID:-none}, actuel=${CURRENT_MPV_PID:-none})"
+    exit 0
+fi
+
+if ! kill -0 "$EXPECTED_MPV_PID" 2>/dev/null; then
+    log "Anti-veille annulée : mpv attendu déjà arrêté PID=$EXPECTED_MPV_PID"
+    exit 0
+fi
 
 python3 - "$SOCKET" "$MPV_PID_FILE" "$STATE_FILE" "$WAVEFORM_FILE" "$FADE_ENABLED" "$FADE_DURATION" "$FADE_CURVE" <<'PY'
 import json

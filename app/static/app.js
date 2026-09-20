@@ -555,8 +555,6 @@ function markHomePlayingTile(data) {
 
   if (data.context === "alarm" || data.status === "fading") {
     target = document.querySelector('[data-home-app="alarm"]');
-  } else if (data.mode === "radio") {
-    target = document.querySelector('[data-home-app="radio"]');
   } else {
     target = document.querySelector('[data-home-app="player"]');
   }
@@ -578,6 +576,16 @@ function updatePlaybackUx(data) {
     form.classList.toggle("hidden", !isPlaying);
   });
 
+  const transport = document.getElementById("playerTransportControls");
+  if (transport) {
+    const manualPlayer =
+      isPlaying &&
+      data.context !== "alarm" &&
+      data.context !== "sleep";
+
+    transport.classList.toggle("hidden", !manualPlayer);
+  }
+
   // Nettoyage des tuiles accueil.
   document.querySelectorAll("[data-home-app]").forEach((tile) => {
     tile.classList.remove("active", "playing", "is-playing");
@@ -598,9 +606,12 @@ function updatePlaybackUx(data) {
     app = "sleep";
   } else if (data.context === "alarm") {
     app = "alarm";
-  } else if (data.mode === "radio") {
-    app = "radio";
-  } else if (data.mode === "youtube" || data.mode === "local") {
+  } else if (
+    data.mode === "radio" ||
+    data.mode === "youtube" ||
+    data.mode === "local" ||
+    data.mode === "playlist"
+  ) {
     app = "player";
   }
 
@@ -1123,6 +1134,271 @@ setInterval(() => {
 
 pollPremiumWaveformLevel();
 requestAnimationFrame(animatePremiumWaveforms);
+
+
+// ===============================
+// Contrôles transport lecteur
+// ===============================
+
+document.querySelectorAll("[data-player-command]").forEach((button) => {
+  button.addEventListener("click", async () => {
+    const command = button.dataset.playerCommand;
+
+    if (!command) return;
+
+    button.disabled = true;
+
+    try {
+      const res = await fetch(`/player_command/${command}`, {
+        method: "POST",
+      });
+
+      const json = await res.json();
+
+      if (actionStatus) {
+        actionStatus.textContent =
+          json.message || (json.ok ? "Commande envoyée" : "Erreur");
+      }
+
+      if (json.ok) {
+        setTimeout(playerTick, 250);
+      }
+    } catch (e) {
+      if (actionStatus) {
+        actionStatus.textContent = "Erreur réseau";
+      }
+    } finally {
+      setTimeout(() => {
+        button.disabled = false;
+      }, 180);
+    }
+  });
+});
+
+
+// ===============================
+// Lecteur unifié : YouTube / Radio / Playlists
+// ===============================
+
+const playerModeChoices = document.querySelectorAll(".player-mode-choice");
+const playerModePanels = document.querySelectorAll(".player-mode-panel");
+const playerPlaylistList = document.getElementById("playerPlaylistList");
+
+function setPlayerMode(mode) {
+  playerModeChoices.forEach((button) => {
+    button.classList.toggle("active", button.dataset.playerMode === mode);
+  });
+
+  playerModePanels.forEach((panel) => {
+    panel.classList.toggle("hidden", panel.dataset.playerPanel !== mode);
+  });
+}
+
+playerModeChoices.forEach((button) => {
+  button.addEventListener("click", () => {
+    setPlayerMode(button.dataset.playerMode || "youtube");
+  });
+});
+
+async function playPlayerPlaylist(playlistId, mode = "playlist") {
+  const data = new FormData();
+  data.append("playlist_id", playlistId);
+  data.append("mode", mode);
+
+  if (actionStatus) actionStatus.textContent = "Lancement…";
+
+  try {
+    const res = await fetch("/play_playlist", {
+      method: "POST",
+      body: data,
+    });
+
+    const json = await res.json();
+
+    if (actionStatus) {
+      actionStatus.textContent =
+        json.message || (json.ok ? "Lecture lancée" : "Erreur");
+    }
+
+    if (json.ok) {
+      setTimeout(playerTick, 1200);
+    }
+  } catch (e) {
+    if (actionStatus) actionStatus.textContent = "Erreur réseau";
+  }
+}
+
+
+async function loadPlayerPlaylistFiles(playlist, panel) {
+  if (!panel || panel.dataset.loaded === "1") return;
+
+  panel.innerHTML = '<p class="small">Lecture des morceaux…</p>';
+
+  try {
+    const res = await fetch(
+      `/playlist_files/${encodeURIComponent(playlist.id)}`,
+      { cache: "no-store" }
+    );
+
+    const data = await res.json();
+
+    if (!data.ok) {
+      throw new Error(data.message || "Erreur playlist");
+    }
+
+    const files = data.files || [];
+
+    panel.innerHTML = "";
+
+    const randomButton = document.createElement("button");
+    randomButton.type = "button";
+    randomButton.className = "player-playlist-random";
+    randomButton.innerHTML = `
+      <span>🔀 Lecture aléatoire</span>
+      <small>${files.length} morceau(x)</small>
+    `;
+
+    randomButton.addEventListener("click", async (event) => {
+      event.stopPropagation();
+      await playPlayerPlaylist(playlist.id, "random");
+    });
+
+    panel.appendChild(randomButton);
+
+    if (files.length === 0) {
+      const empty = document.createElement("p");
+      empty.className = "small";
+      empty.textContent = "Aucun morceau local.";
+      panel.appendChild(empty);
+    }
+
+    files.forEach((file) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "player-track-choice";
+
+      button.innerHTML = `
+        <span>${file.label || file.filename}</span>
+        <small>${file.size_label || file.filename || ""}</small>
+      `;
+
+      button.addEventListener("click", async (event) => {
+        event.stopPropagation();
+
+        const data = new FormData();
+        data.append("playlist_id", playlist.id);
+        data.append("mode", "playlist");
+        data.append("start_file", file.path);
+
+        if (actionStatus) {
+          actionStatus.textContent = "Lancement…";
+        }
+
+        try {
+          const res = await fetch("/play_playlist", {
+            method: "POST",
+            body: data,
+          });
+
+          const json = await res.json();
+
+          if (actionStatus) {
+            actionStatus.textContent =
+              json.message || (json.ok ? "Lecture lancée" : "Erreur");
+          }
+
+          if (json.ok) {
+            setTimeout(playerTick, 1200);
+          }
+        } catch (e) {
+          if (actionStatus) {
+            actionStatus.textContent = "Erreur réseau";
+          }
+        }
+      });
+
+      panel.appendChild(button);
+    });
+
+    panel.dataset.loaded = "1";
+  } catch (e) {
+    panel.innerHTML =
+      '<p class="small">Impossible de lire cette playlist.</p>';
+  }
+}
+
+
+function buildPlayerPlaylists(playlists) {
+  if (!playerPlaylistList) return;
+
+  playerPlaylistList.innerHTML = "";
+
+  if (!playlists || playlists.length === 0) {
+    playerPlaylistList.innerHTML =
+      '<p class="small">Aucune playlist locale disponible.</p>';
+    return;
+  }
+
+  playlists.forEach((playlist) => {
+    const card = document.createElement("section");
+    card.className = "player-playlist-card";
+
+    const header = document.createElement("button");
+    header.type = "button";
+    header.className = "player-playlist-choice";
+
+    const label = playlist.label || playlist.id;
+
+    header.innerHTML = `
+      <span>${label}</span>
+      <small>${playlist.id}</small>
+    `;
+
+    const filesPanel = document.createElement("div");
+    filesPanel.className = "player-playlist-tracks hidden";
+
+    header.addEventListener("click", async () => {
+      const wasHidden = filesPanel.classList.contains("hidden");
+
+      document.querySelectorAll(".player-playlist-tracks").forEach((panel) => {
+        if (panel !== filesPanel) panel.classList.add("hidden");
+      });
+
+      filesPanel.classList.toggle("hidden", !wasHidden);
+
+      if (wasHidden) {
+        await loadPlayerPlaylistFiles(playlist, filesPanel);
+      }
+    });
+
+    card.appendChild(header);
+    card.appendChild(filesPanel);
+    playerPlaylistList.appendChild(card);
+  });
+}
+
+
+async function loadPlayerPlaylists() {
+  if (!playerPlaylistList) return;
+
+  try {
+    const res = await fetch("/playlists", { cache: "no-store" });
+    const data = await res.json();
+
+    if (!data.ok) {
+      throw new Error("Erreur playlists");
+    }
+
+    buildPlayerPlaylists(data.playlists || []);
+  } catch (e) {
+    playerPlaylistList.innerHTML =
+      '<p class="small">Impossible de lire les playlists.</p>';
+  }
+}
+
+if (playerPlaylistList) {
+  loadPlayerPlaylists();
+}
 
 
 // ===============================
@@ -2082,7 +2358,9 @@ function playbackBelongsToCurrentModule(data) {
   }
 
   if (moduleName === "player") {
-    return ["youtube", "local"].includes(data.mode) && data.context !== "alarm" && data.context !== "sleep";
+    return ["youtube", "local", "radio", "playlist"].includes(data.mode)
+      && data.context !== "alarm"
+      && data.context !== "sleep";
   }
 
   return false;

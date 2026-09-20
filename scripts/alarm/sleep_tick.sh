@@ -75,4 +75,13 @@ sleep 1
 nohup /bin/bash "$PLAY_SCRIPT" "$PLAY_MODE" "$SOURCE_ID" sleep >> "$LOG_FILE" 2>&1 &
 sleep 2
 
-nohup /bin/bash "$SLEEP_TIMER_SCRIPT" "$DURATION" "$FADE_ENABLED" "$DURATION" "$CURVE" >> "$LOG_FILE" 2>&1 &
+EXPECTED_MPV_PID="$(cat "$STATE_DIR/mpv.pid" 2>/dev/null || true)"
+
+if [ -z "$EXPECTED_MPV_PID" ] || ! kill -0 "$EXPECTED_MPV_PID" 2>/dev/null; then
+  log "Anti-veille : impossible d'armer le timer, mpv absent"
+  exit 1
+fi
+
+log "Anti-veille : timer associé au mpv PID=$EXPECTED_MPV_PID"
+
+nohup /bin/bash "$SLEEP_TIMER_SCRIPT" "$DURATION" "$FADE_ENABLED" "$DURATION" "$CURVE" "$EXPECTED_MPV_PID" >> "$LOG_FILE" 2>&1 &
