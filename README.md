@@ -1,6 +1,6 @@
 # ⏰ Réveil Raspberry Pi – kxsbpi
 
-Un réveil audio intelligent, pilotable depuis une interface web locale, conçu pour tourner sur Raspberry Pi.
+Un réveil audio intelligent, pilotable sur smartphone depuis une application android, conçu pour tourner sur Raspberry Pi.
 
 ---
 
@@ -34,7 +34,6 @@ Ce projet transforme un Raspberry Pi en réveil autonome avec :
 * durée configurable
 * volume de départ
 * courbes disponibles :
-
   * linéaire
   * ease-in
   * ease-out
@@ -57,7 +56,7 @@ Ce projet transforme un Raspberry Pi en réveil autonome avec :
 ### 🔄 Playlist dynamique
 
 * téléchargement via `yt-dlp`
-* mise à jour automatique
+* mise à jour automatique en miroire depuis les playlistes youtubes.
 * recalcul loudness
 
 ---
