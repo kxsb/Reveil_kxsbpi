@@ -80,13 +80,6 @@ Ce projet transforme un Raspberry Pi en réveil autonome avec :
 
 ## ⏱️ Activation du réveil automatique
 
-Ajouter au cron :
-
-```bash
-crontab -e
-```
-
-
 ```
 à mettre à jour
 ```
